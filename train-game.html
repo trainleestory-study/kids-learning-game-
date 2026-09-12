@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Emoji 數字小火車卡 Number Train</title>
+    <title>Emoji 數字小火車 Level 2 (10-20)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Canvas Confetti CDN -->
@@ -49,47 +49,47 @@
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-4">
 
-    <!-- 頂層 JSON 題目與關卡設定檔 (方便簡易編輯) -->
+    <!-- 頂層 JSON 題目與關卡設定檔 -->
     <script>
         const GAME_CONFIG = {
             title: "🚂 數字小火車接龍",
-            speechLang: "zh-HK", // 可調為 'zh-HK' 或 'en-GB'
+            speechLang: "zh-HK", // 'zh-HK' 或 'en-GB'
             levels: [
                 {
                     id: 1,
                     name: "Level 1：基礎 1-10 接龍",
-                    desc: "5 節車廂 ｜ 2 個空格 ｜ 4 個選項",
                     carriages: 5,
                     blanks: 2,
                     options: 4,
                     questions: 10,
                     type: "sequence",
-                    step: 1,
-                    maxStart: 5
+                    minVal: 1,
+                    maxVal: 10,
+                    step: 1
                 },
                 {
                     id: 2,
-                    name: "Level 2：進階 1-20 接龍",
-                    desc: "6 節車廂 ｜ 3 個空格 ｜ 6 個選項",
+                    name: "Level 2：進階 10-20 接龍",
                     carriages: 6,
                     blanks: 3,
                     options: 6,
                     questions: 10,
                     type: "sequence",
-                    step: 1,
-                    maxStart: 14
+                    minVal: 10,
+                    maxVal: 20,
+                    step: 1
                 },
                 {
                     id: 3,
-                    name: "Level 3：單數與雙數火車",
-                    desc: "6 節車廂 (奇數/偶數) ｜ 3 個空格 ｜ 6 個選項",
+                    name: "Level 3：10-20 單數與雙數",
                     carriages: 6,
                     blanks: 3,
                     options: 6,
                     questions: 10,
                     type: "odd_even",
-                    step: 2,
-                    maxStart: 10
+                    minVal: 10,
+                    maxVal: 20,
+                    step: 2
                 }
             ]
         };
@@ -132,7 +132,7 @@
             </button>
         </div>
 
-        <!-- 🚂 列車展示區 (純 Emoji & Box) -->
+        <!-- 🚂 列車展示區 -->
         <div class="w-full overflow-x-auto py-4 flex justify-center items-center">
             <div id="train-track" class="flex items-end gap-2 px-4 min-w-max">
                 <!-- 火車頭與車廂將在此動態繪製 -->
@@ -179,9 +179,6 @@
         let userAnswers = {};
         let currentLang = GAME_CONFIG.speechLang;
 
-        // 火車頭乘客 Emoji 隨機庫
-        const PASSENGERS = ['🐻', '🦁', '🐘', '🦒', '🐵', '🐰', '🐼', '🦊', '🐸', '🦄'];
-
         window.onload = () => {
             renderMenu();
         };
@@ -220,10 +217,9 @@
                 card.className = "bg-white rounded-3xl p-6 border-4 border-amber-300 shadow-xl hover:shadow-2xl transition cursor-pointer flex flex-col justify-between";
                 card.onclick = () => startLevel(lvl);
                 card.innerHTML = `
-                    <div>
-                        <div class="text-5xl mb-2">🚂 💨</div>
-                        <h3 class="text-2xl font-black text-amber-900 mb-1">${lvl.name}</h3>
-                        <p class="text-amber-700 font-bold text-sm mb-4">${lvl.desc}</p>
+                    <div class="mb-4">
+                        <div class="text-5xl mb-3">🚂 💨</div>
+                        <h3 class="text-2xl font-black text-amber-900">${lvl.name}</h3>
                     </div>
                     <button class="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-xl py-3 rounded-2xl shadow">
                         開始關卡 ▶
@@ -250,18 +246,27 @@
 
         function generateQuestions() {
             questions = [];
+            const min = currentLvl.minVal;
+            const max = currentLvl.maxVal;
+
             for (let i = 0; i < currentLvl.questions; i++) {
                 let seq = [];
-                let start = 1;
+                let start = min;
 
                 if (currentLvl.type === "sequence") {
-                    start = Math.floor(Math.random() * currentLvl.maxStart) + 1;
+                    const maxStart = max - (currentLvl.carriages - 1) * currentLvl.step;
+                    start = Math.floor(Math.random() * (maxStart - min + 1)) + min;
                     for (let j = 0; j < currentLvl.carriages; j++) {
                         seq.push(start + j * currentLvl.step);
                     }
-                } else {
+                } else { // odd_even 類型
                     const isEven = Math.random() > 0.5;
-                    start = isEven ? (Math.floor(Math.random() * 4) + 1) * 2 : (Math.floor(Math.random() * 4) * 2) + 1;
+                    const possibleStarts = [];
+                    for (let s = min; s <= max - (currentLvl.carriages - 1) * 2; s++) {
+                        if (isEven && s % 2 === 0) possibleStarts.push(s);
+                        if (!isEven && s % 2 !== 0) possibleStarts.push(s);
+                    }
+                    start = possibleStarts[Math.floor(Math.random() * possibleStarts.length)];
                     for (let j = 0; j < currentLvl.carriages; j++) {
                         seq.push(start + j * 2);
                     }
@@ -277,16 +282,17 @@
                 let correct = blanks.map(idx => seq[idx]);
                 let opts = [...correct];
                 while (opts.length < currentLvl.options) {
-                    let fake = Math.floor(Math.random() * 25) + 1;
-                    if (!seq.includes(fake) && !opts.includes(fake)) opts.push(fake);
+                    let fake = Math.floor(Math.random() * (max - min + 1)) + min;
+                    if (!seq.includes(fake) && !opts.includes(fake)) {
+                        opts.push(fake);
+                    }
                 }
                 opts.sort(() => Math.random() - 0.5);
 
                 questions.push({
                     seq,
                     blanks,
-                    opts,
-                    passenger: PASSENGERS[Math.floor(Math.random() * PASSENGERS.length)]
+                    opts
                 });
             }
         }
@@ -304,18 +310,16 @@
             speak(currentLang === 'zh-HK' ? '請幫小火車填補缺失的數字。' : 'Complete the numbers on the train.');
         }
 
-        // 繪製車頭與車廂 (純 CSS 方塊與 Emoji)
         function renderTrain() {
             const track = document.getElementById('train-track');
             track.innerHTML = '';
 
-            // 1. 繪製火車頭 (Engine Box)
+            // 火車頭 (單一加大火車 Emoji 🚂)
             const engine = document.createElement('div');
             engine.className = "flex flex-col items-center mr-1";
             engine.innerHTML = `
                 <div class="w-24 h-24 md:w-28 md:h-28 bg-red-500 rounded-3xl border-4 border-red-700 flex flex-col justify-center items-center shadow-lg relative">
-                    <span class="text-3xl md:text-4xl">${currQ.passenger}</span>
-                    <span class="text-xl">🚂</span>
+                    <span class="text-5xl md:text-6xl">🚂</span>
                 </div>
                 <div class="flex justify-around w-full mt-1 px-2">
                     <span class="text-xl anim-wheel">⚙️</span>
@@ -324,7 +328,7 @@
             `;
             track.appendChild(engine);
 
-            // 2. 繪製車廂 (Carriage Boxes)
+            // 車廂
             currQ.seq.forEach((num, idx) => {
                 const isBlank = currQ.blanks.includes(idx);
                 const carriage = document.createElement('div');
