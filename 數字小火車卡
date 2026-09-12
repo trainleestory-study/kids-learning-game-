@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Emoji 數字小火車卡 Number Train</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* 幼兒觸控與拖拽最佳化 */
+        * {
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", "Microsoft JhengHei", sans-serif;
+            background-color: #fef3c7;
+        }
+        /* 車廂與放置槽動畫 */
+        .train-slot {
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .train-slot.drag-over {
+            transform: scale(1.1);
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .option-card {
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .option-card:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+        /* 輪子轉動動畫 */
+        @keyframes rotate-wheel {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .anim-wheel {
+            display: inline-block;
+            animation: rotate-wheel 3s linear infinite;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col justify-between p-4">
+
+    <!-- 頂層 JSON 題目與關卡設定檔 (方便簡易編輯) -->
+    <script>
+        const GAME_CONFIG = {
+            title: "🚂 數字小火車接龍",
+            speechLang: "zh-HK", // 可調為 'zh-HK' 或 'en-GB'
+            levels: [
+                {
+                    id: 1,
+                    name: "Level 1：基礎 1-10 接龍",
+                    desc: "5 節車廂 ｜ 2 個空格 ｜ 4 個選項",
+                    carriages: 5,
+                    blanks: 2,
+                    options: 4,
+                    questions: 10,
+                    type: "sequence",
+                    step: 1,
+                    maxStart: 5
+                },
+                {
+                    id: 2,
+                    name: "Level 2：進階 1-20 接龍",
+                    desc: "6 節車廂 ｜ 3 個空格 ｜ 6 個選項",
+                    carriages: 6,
+                    blanks: 3,
+                    options: 6,
+                    questions: 10,
+                    type: "sequence",
+                    step: 1,
+                    maxStart: 14
+                },
+                {
+                    id: 3,
+                    name: "Level 3：單數與雙數火車",
+                    desc: "6 節車廂 (奇數/偶數) ｜ 3 個空格 ｜ 6 個選項",
+                    carriages: 6,
+                    blanks: 3,
+                    options: 6,
+                    questions: 10,
+                    type: "odd_even",
+                    step: 2,
+                    maxStart: 10
+                }
+            ]
+        };
+    </script>
+
+    <!-- 頂部導覽區 -->
+    <header class="flex justify-between items-center bg-white/90 backdrop-blur-md p-3 md:p-4 rounded-3xl shadow-lg border-4 border-amber-300">
+        <button id="home-btn" onclick="showMenu()" class="hidden bg-red-400 hover:bg-red-500 text-white font-black text-lg md:text-xl px-4 py-2 rounded-2xl shadow">
+            🏠 首頁
+        </button>
+        <h1 class="text-2xl md:text-3xl font-black text-amber-900 mx-auto" id="app-title">
+            🚂 數字小火車
+        </h1>
+        <div class="flex gap-2">
+            <button id="btn-zh" onclick="setLang('zh-HK')" class="px-3 py-1 font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white">粵語</button>
+            <button id="btn-en" onclick="setLang('en-GB')" class="px-3 py-1 font-bold rounded-xl border-2 border-gray-300 bg-white text-gray-700">Eng</button>
+        </div>
+    </header>
+
+    <!-- 畫面 1：關卡選擇選單 -->
+    <main id="menu-screen" class="flex-1 flex flex-col justify-center items-center my-4">
+        <div class="text-center mb-6">
+            <h2 class="text-3xl md:text-4xl font-black text-amber-900 mb-2">請選擇關卡 🌟</h2>
+            <p class="text-amber-800 font-bold">點擊數字卡片或拖拽到火車車廂上吧！</p>
+        </div>
+        <div id="levels-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
+            <!-- 關卡由 JS 自動渲染 -->
+        </div>
+    </main>
+
+    <!-- 畫面 2：遊戲進行區 -->
+    <main id="game-screen" class="hidden flex-1 flex flex-col justify-between items-center my-2">
+        <!-- 頂部資訊 -->
+        <div class="w-full flex justify-between items-center px-4">
+            <span id="progress-text" class="text-xl md:text-2xl font-black text-amber-900 bg-amber-200/80 px-4 py-1.5 rounded-full border-2 border-amber-400">
+                第 1 / 10 題
+            </span>
+            <button onclick="speakPrompt()" class="bg-yellow-400 hover:bg-yellow-300 text-amber-950 font-black text-lg px-4 py-1.5 rounded-full border-2 border-yellow-500 shadow flex items-center gap-1">
+                🔊 讀題
+            </button>
+        </div>
+
+        <!-- 🚂 列車展示區 (純 Emoji & Box) -->
+        <div class="w-full overflow-x-auto py-4 flex justify-center items-center">
+            <div id="train-track" class="flex items-end gap-2 px-4 min-w-max">
+                <!-- 火車頭與車廂將在此動態繪製 -->
+            </div>
+        </div>
+
+        <!-- 🔢 數字選項區 -->
+        <div class="w-full bg-white/90 rounded-3xl p-4 md:p-6 shadow-xl border-4 border-amber-200">
+            <p class="text-center text-amber-900 font-bold mb-3 text-lg">選出正確的數字：</p>
+            <div id="options-box" class="flex justify-center items-center gap-3 flex-wrap min-h-[85px]">
+                <!-- 選項卡片 -->
+            </div>
+        </div>
+
+        <!-- 檢查按鈕 -->
+        <button id="submit-btn" onclick="checkAnswer()" class="bg-green-500 hover:bg-green-600 text-white font-black text-2xl px-12 py-3 rounded-2xl shadow-xl transition transform active:scale-95">
+            ✅ 檢查答案
+        </button>
+    </main>
+
+    <!-- 通關彈窗 -->
+    <div id="victory-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center border-8 border-yellow-400 shadow-2xl">
+            <div class="text-6xl mb-4">🎉 🏆 🎉</div>
+            <h2 class="text-3xl font-black text-amber-900 mb-2">太棒了！順利通關！</h2>
+            <p class="text-lg text-amber-700 font-bold mb-6">你完成了這個關卡的所有火車接龍！</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="restartLevel()" class="w-full bg-green-500 hover:bg-green-600 text-white font-black text-2xl py-3.5 rounded-2xl shadow">
+                    🔄 再玩一次
+                </button>
+                <button onclick="showMenu()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-black text-xl py-3 rounded-2xl shadow">
+                    🏠 返回主選單
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊戲邏輯控制腳本 -->
+    <script>
+        let currentLvl = null;
+        let qIndex = 0;
+        let questions = [];
+        let currQ = null;
+        let userAnswers = {};
+        let currentLang = GAME_CONFIG.speechLang;
+
+        // 火車頭乘客 Emoji 隨機庫
+        const PASSENGERS = ['🐻', '🦁', '🐘', '🦒', '🐵', '🐰', '🐼', '🦊', '🐸', '🦄'];
+
+        window.onload = () => {
+            renderMenu();
+        };
+
+        function setLang(lang) {
+            currentLang = lang;
+            document.getElementById('btn-zh').className = lang === 'zh-HK' 
+                ? 'px-3 py-1 font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white' 
+                : 'px-3 py-1 font-bold rounded-xl border-2 border-gray-300 bg-white text-gray-700';
+            document.getElementById('btn-en').className = lang === 'en-GB' 
+                ? 'px-3 py-1 font-bold rounded-xl border-2 border-blue-500 bg-blue-500 text-white' 
+                : 'px-3 py-1 font-bold rounded-xl border-2 border-gray-300 bg-white text-gray-700';
+            speak(lang === 'zh-HK' ? '廣東話' : 'English');
+        }
+
+        function speak(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = currentLang;
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        }
+
+        function renderMenu() {
+            document.getElementById('home-btn').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('victory-modal').classList.add('hidden');
+
+            const grid = document.getElementById('levels-grid');
+            grid.innerHTML = '';
+
+            GAME_CONFIG.levels.forEach(lvl => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-3xl p-6 border-4 border-amber-300 shadow-xl hover:shadow-2xl transition cursor-pointer flex flex-col justify-between";
+                card.onclick = () => startLevel(lvl);
+                card.innerHTML = `
+                    <div>
+                        <div class="text-5xl mb-2">🚂 💨</div>
+                        <h3 class="text-2xl font-black text-amber-900 mb-1">${lvl.name}</h3>
+                        <p class="text-amber-700 font-bold text-sm mb-4">${lvl.desc}</p>
+                    </div>
+                    <button class="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-xl py-3 rounded-2xl shadow">
+                        開始關卡 ▶
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showMenu() { renderMenu(); }
+
+        function startLevel(lvl) {
+            currentLvl = lvl;
+            qIndex = 0;
+            generateQuestions();
+
+            document.getElementById('home-btn').classList.remove('hidden');
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function restartLevel() { startLevel(currentLvl); }
+
+        function generateQuestions() {
+            questions = [];
+            for (let i = 0; i < currentLvl.questions; i++) {
+                let seq = [];
+                let start = 1;
+
+                if (currentLvl.type === "sequence") {
+                    start = Math.floor(Math.random() * currentLvl.maxStart) + 1;
+                    for (let j = 0; j < currentLvl.carriages; j++) {
+                        seq.push(start + j * currentLvl.step);
+                    }
+                } else {
+                    const isEven = Math.random() > 0.5;
+                    start = isEven ? (Math.floor(Math.random() * 4) + 1) * 2 : (Math.floor(Math.random() * 4) * 2) + 1;
+                    for (let j = 0; j < currentLvl.carriages; j++) {
+                        seq.push(start + j * 2);
+                    }
+                }
+
+                let blanks = [];
+                while (blanks.length < currentLvl.blanks) {
+                    let r = Math.floor(Math.random() * currentLvl.carriages);
+                    if (!blanks.includes(r)) blanks.push(r);
+                }
+                blanks.sort((a, b) => a - b);
+
+                let correct = blanks.map(idx => seq[idx]);
+                let opts = [...correct];
+                while (opts.length < currentLvl.options) {
+                    let fake = Math.floor(Math.random() * 25) + 1;
+                    if (!seq.includes(fake) && !opts.includes(fake)) opts.push(fake);
+                }
+                opts.sort(() => Math.random() - 0.5);
+
+                questions.push({
+                    seq,
+                    blanks,
+                    opts,
+                    passenger: PASSENGERS[Math.floor(Math.random() * PASSENGERS.length)]
+                });
+            }
+        }
+
+        function loadQuestion() {
+            userAnswers = {};
+            currQ = questions[qIndex];
+            document.getElementById('progress-text').innerText = `第 ${qIndex + 1} / ${currentLvl.questions} 題`;
+            renderTrain();
+            renderOptions();
+            speakPrompt();
+        }
+
+        function speakPrompt() {
+            speak(currentLang === 'zh-HK' ? '請幫小火車填補缺失的數字。' : 'Complete the numbers on the train.');
+        }
+
+        // 繪製車頭與車廂 (純 CSS 方塊與 Emoji)
+        function renderTrain() {
+            const track = document.getElementById('train-track');
+            track.innerHTML = '';
+
+            // 1. 繪製火車頭 (Engine Box)
+            const engine = document.createElement('div');
+            engine.className = "flex flex-col items-center mr-1";
+            engine.innerHTML = `
+                <div class="w-24 h-24 md:w-28 md:h-28 bg-red-500 rounded-3xl border-4 border-red-700 flex flex-col justify-center items-center shadow-lg relative">
+                    <span class="text-3xl md:text-4xl">${currQ.passenger}</span>
+                    <span class="text-xl">🚂</span>
+                </div>
+                <div class="flex justify-around w-full mt-1 px-2">
+                    <span class="text-xl anim-wheel">⚙️</span>
+                    <span class="text-xl anim-wheel">⚙️</span>
+                </div>
+            `;
+            track.appendChild(engine);
+
+            // 2. 繪製車廂 (Carriage Boxes)
+            currQ.seq.forEach((num, idx) => {
+                const isBlank = currQ.blanks.includes(idx);
+                const carriage = document.createElement('div');
+                carriage.className = "flex flex-col items-center";
+
+                if (isBlank) {
+                    const filled = userAnswers[idx];
+                    carriage.innerHTML = `
+                        <div data-slot="${idx}"
+                             onclick="clearSlot(${idx})"
+                             ondragover="allowDrop(event)"
+                             ondragleave="leaveDrop(event)"
+                             ondrop="dropItem(event, ${idx})"
+                             class="train-slot w-24 h-24 md:w-28 md:h-28 bg-amber-100 rounded-3xl border-4 border-dashed border-amber-400 flex justify-center items-center shadow-inner cursor-pointer">
+                            ${filled !== undefined 
+                                ? `<span class="text-4xl md:text-5xl font-black text-blue-600 animate-bounce">${filled}</span>` 
+                                : `<span class="text-4xl text-amber-300 font-black">❓</span>`}
+                        </div>
+                        <div class="flex justify-around w-full mt-1 px-2">
+                            <span class="text-xl anim-wheel">⚙️</span>
+                            <span class="text-xl anim-wheel">⚙️</span>
+                        </div>
+                    `;
+                } else {
+                    carriage.innerHTML = `
+                        <div class="w-24 h-24 md:w-28 md:h-28 bg-sky-400 rounded-3xl border-4 border-sky-600 flex justify-center items-center shadow-md">
+                            <span class="text-4xl md:text-5xl font-black text-white">${num}</span>
+                        </div>
+                        <div class="flex justify-around w-full mt-1 px-2">
+                            <span class="text-xl anim-wheel">⚙️</span>
+                            <span class="text-xl anim-wheel">⚙️</span>
+                        </div>
+                    `;
+                }
+                track.appendChild(carriage);
+            });
+        }
+
+        function renderOptions() {
+            const box = document.getElementById('options-box');
+            box.innerHTML = '';
+            const usedVals = Object.values(userAnswers);
+
+            currQ.opts.forEach(val => {
+                const isUsed = usedVals.includes(val);
+                const card = document.createElement('div');
+                card.draggable = !isUsed;
+                card.ondragstart = (e) => e.dataTransfer.setData("text/plain", val);
+                card.className = `option-card w-18 h-18 md:w-22 md:h-22 p-4 rounded-2xl border-4 flex justify-center items-center font-black text-3xl md:text-4xl shadow-md ${
+                    isUsed 
+                        ? 'bg-gray-200 border-gray-300 text-gray-400 opacity-40 cursor-not-allowed' 
+                        : 'bg-white border-amber-400 text-amber-900 hover:bg-amber-50'
+                }`;
+                card.innerText = val;
+                card.onclick = () => {
+                    if (!isUsed) fillFirstEmpty(val);
+                };
+                box.appendChild(card);
+            });
+        }
+
+        function fillFirstEmpty(val) {
+            speak(val.toString());
+            const emptyIdx = currQ.blanks.find(idx => userAnswers[idx] === undefined);
+            if (emptyIdx !== undefined) {
+                userAnswers[emptyIdx] = val;
+                renderTrain();
+                renderOptions();
+            }
+        }
+
+        function clearSlot(idx) {
+            if (userAnswers[idx] !== undefined) {
+                delete userAnswers[idx];
+                renderTrain();
+                renderOptions();
+            }
+        }
+
+        function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function leaveDrop(e) { e.currentTarget.classList.remove('drag-over'); }
+        function dropItem(e, idx) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const val = parseInt(e.dataTransfer.getData("text/plain"), 10);
+            if (!isNaN(val)) {
+                userAnswers[idx] = val;
+                speak(val.toString());
+                renderTrain();
+                renderOptions();
+            }
+        }
+
+        function checkAnswer() {
+            if (Object.keys(userAnswers).length < currQ.blanks.length) {
+                speak(currentLang === 'zh-HK' ? '請填滿所有車廂！' : 'Please fill all carriages!');
+                return;
+            }
+
+            let correct = true;
+            currQ.blanks.forEach(idx => {
+                if (userAnswers[idx] !== currQ.seq[idx]) correct = false;
+            });
+
+            if (correct) {
+                confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
+                speak(currentLang === 'zh-HK' ? '答對了！叻！' : 'Correct! Well done!');
+                setTimeout(() => {
+                    qIndex++;
+                    if (qIndex < currentLvl.questions) {
+                        loadQuestion();
+                    } else {
+                        confetti({ particleCount: 100, spread: 100 });
+                        document.getElementById('victory-modal').classList.remove('hidden');
+                        speak(currentLang === 'zh-HK' ? '恭喜你！完成關卡！' : 'Congratulations!');
+                    }
+                }, 1000);
+            } else {
+                speak(currentLang === 'zh-HK' ? '再試一次喔！' : 'Try again!');
+            }
+        }
+    </script>
+</body>
+</html>
