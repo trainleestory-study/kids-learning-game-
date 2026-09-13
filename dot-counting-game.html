@@ -69,7 +69,7 @@
     <div id="mainMenu" class="w-full max-w-4xl space-y-6">
       <div class="text-center mb-8">
         <h2 class="text-3xl md:text-4xl font-black text-sky-900 mb-2">請選擇關卡</h2>
-        <p class="text-sky-800 text-lg font-bold">點擊聽題目，挑戰 30 道數數與加減法題目！</p>
+        <p class="text-sky-800 text-lg font-bold">觀察圖案與數字，挑戰 30 道數數與加減法題目！</p>
       </div>
       <div id="levelGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </div>
@@ -85,17 +85,12 @@
         <div id="progressBar" class="bg-sky-500 h-full w-0 rounded-full transition-all duration-300"></div>
       </div>
 
-      <!-- 朗讀按鈕 -->
-      <button onclick="speakCurrentQuestion()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-lg px-6 py-2.5 rounded-full shadow-md btn-bounce flex items-center gap-2">
-        🔊 聽朗讀題目
-      </button>
-
       <!-- 題目顯示區 -->
       <div class="w-full bg-white p-6 rounded-3xl border-4 border-sky-300 shadow-lg flex flex-col items-center gap-6">
         <!-- 上方：題目表達式卡片 -->
         <div id="questionContainer" class="flex flex-wrap items-center justify-center gap-3 md:gap-6 w-full"></div>
 
-        <!-- 下方：答案放置目標框 (分離設計，確保位置固定且不干擾題目) -->
+        <!-- 下方：答案放置目標框 (分離設計，確保位置固定不重疊) -->
         <div class="flex items-center gap-3 border-t-2 border-sky-100 pt-4 w-full justify-center">
           <span class="text-2xl font-black text-sky-900">答案是：</span>
           <div id="answerBox" class="drop-zone border-4 border-dashed border-sky-400 bg-sky-50 rounded-2xl w-24 h-24 md:w-28 md:h-28 flex items-center justify-center text-4xl md:text-5xl font-black text-sky-900 shadow-inner">
@@ -131,10 +126,9 @@
 
   <script>
     /* ==========================================================================
-       【頂層 JSON 設定檔】
+       【頂層 JSON 設定檔】 (無程式背景者可在此輕易調整關卡資訊)
        ========================================================================== */
     const GAME_CONFIG = {
-      lang: "zh-HK", // 粵語發音
       levels: [
         {
           id: 1,
@@ -157,30 +151,9 @@
     let currentQuestionIndex = 0;
     let questionsList = [];
     let currentQuestion = null;
-    let lastCorrectOptionIndex = -1;
 
     function getRandomInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    function speakText(text) {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = GAME_CONFIG.lang;
-        utterance.rate = 0.85;
-        window.speechSynthesis.speak(utterance);
-      }
-    }
-
-    function speakCurrentQuestion() {
-      if (!currentQuestion) return;
-      if (currentQuestion.isCountOnly) {
-        speakText(`數一數，這裡有多少個點點？`);
-      } else {
-        const opStr = currentQuestion.op === "+" ? "加" : "減";
-        speakText(`${currentQuestion.val1} ${opStr} ${currentQuestion.val2} 等於多少？`);
-      }
     }
 
     function initMenu() {
@@ -342,11 +315,11 @@
 
       let options = [currentQuestion.ans];
       while (options.length < 4) {
-        let rand = getRandomInt(1, 15);
+        let rand = getRandomInt(0, 15);
         if (!options.includes(rand)) options.push(rand);
       }
       
-      // 隨機洗牌選項
+      // 隨機洗牌選項 (確保正確答案位置隨機改變)
       options.sort(() => Math.random() - 0.5);
 
       options.forEach(num => {
@@ -370,8 +343,6 @@
         const val = e.dataTransfer.getData("text/plain");
         if (val !== null && val !== "") checkAnswer(parseInt(val, 10));
       };
-
-      speakCurrentQuestion();
     }
 
     function checkAnswer(selectedVal) {
@@ -379,7 +350,6 @@
       if (selectedVal === currentQuestion.ans) {
         answerBox.innerText = selectedVal;
         answerBox.classList.add("bg-emerald-200", "border-emerald-500", "text-emerald-800");
-        speakText("答對了！真棒！");
 
         setTimeout(() => {
           currentQuestionIndex++;
@@ -390,11 +360,10 @@
           }
         }, 1000);
       } else {
-        // 答錯溫和重試
+        // 答錯溫和重試機制 (將錯題移至隊尾重新隨機問答)
         questionsList.push(currentQuestion);
         answerBox.innerText = selectedVal;
         answerBox.classList.add("bg-rose-200", "border-rose-500", "text-rose-800");
-        speakText("再試一次看看喔！");
 
         setTimeout(() => {
           answerBox.innerText = "?";
@@ -405,7 +374,6 @@
 
     function showLevelReward() {
       confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
-      speakText("太棒了！你完成了全部 30 道題目！");
       document.getElementById("rewardModal").classList.remove("hidden");
     }
 
