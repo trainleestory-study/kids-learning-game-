@@ -3,477 +3,367 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>小松鼠的橡果寶盒 - 數的分解與組合</title>
-  
+  <title>幼兒互動學習遊戲</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Canvas Confetti CDN -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
   <style>
-    /* 防止雙擊縮放與增強觸控體驗 */
-    body, button, div, span {
+    /* 觸控與互動最佳化 */
+    * {
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     }
-    
-    /* 閃亮與脈動動畫 */
-    @keyframes pulse-glow {
-      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6)); }
-      50% { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.9)); }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang HK", "Traditional Chinese", sans-serif;
+      background-color: #F3F4F6;
     }
-    .glow-effect {
-      animation: pulse-glow 1.8s infinite ease-in-out;
+    .draggable {
+      cursor: grab;
     }
-
-    @keyframes bounce-gentle {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+    .draggable:active {
+      cursor: grabbing;
     }
-    .bounce-animation {
-      animation: bounce-gentle 1.5s infinite;
+    .dropzone-highlight {
+      border-color: #3B82F6 !important;
+      background-color: #EFF6FF !important;
     }
-
-    /* 樹枝圖連接線繪製 */
-    .branch-line {
-      stroke: #8B4513;
-      stroke-width: 8;
-      stroke-linecap: round;
+    @keyframes pulse-slow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .animate-bounce-short {
+      animation: bounce 0.6s ease infinite alternate;
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-10px); }
     }
   </style>
 </head>
-<body class="bg-amber-50 min-h-screen flex flex-col justify-between overflow-x-hidden text-gray-800">
+<body class="bg-amber-50 min-h-screen flex flex-col justify-between text-slate-800">
 
   <!-- 頂部導覽列 -->
-  <header class="bg-amber-500 text-white p-4 shadow-md flex justify-between items-center">
-    <button id="homeBtn" onclick="goHome()" class="hidden bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-2xl font-bold text-xl flex items-center gap-2 border-2 border-white/50 active:scale-95 transition">
-      <i class="fas fa-home"></i> <span>首頁</span>
+  <header class="bg-amber-400 p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
+    <button id="btn-home" onclick="showMainMenu()" class="hidden bg-white text-amber-700 font-bold py-2 px-6 rounded-full text-xl shadow hover:bg-amber-100 transition active:scale-95">
+      🏠 首頁
     </button>
-    <h1 class="text-2xl md:text-3xl font-extrabold text-center flex-1 tracking-wide">
-      🐿️ 小松鼠的橡果寶盒
+    <h1 id="app-title" class="text-2xl sm:text-3xl font-extrabold text-amber-900 mx-auto">
+      🌟 幼兒趣味學習樂園 🌟
     </h1>
-    <div class="w-12"></div>
+    <div class="w-20 hidden sm:block"></div>
   </header>
 
-  <!-- 主內容區域 -->
-  <main class="flex-1 flex flex-col items-center justify-center p-4 max-w-4xl mx-auto w-full">
-
-    <!-- 1. 首頁選單 (關卡選擇) -->
-    <section id="menuScreen" class="w-full flex flex-col items-center gap-6 py-6">
-      <div class="text-center space-y-2">
-        <h2 class="text-3xl font-bold text-amber-900">請選擇關卡</h2>
-        <p class="text-lg text-amber-700 font-semibold">幫助小松鼠把橡果分裝進樹洞吧！</p>
+  <!-- 主內容容器 -->
+  <main class="container mx-auto px-4 py-6 flex-grow flex flex-col justify-center items-center">
+    
+    <!-- 1. 首頁選單 -->
+    <div id="view-menu" class="w-full max-w-4xl">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center text-slate-700 mb-8">請選擇關卡！</h2>
+      <div id="game-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <!-- 關卡卡片由 JS 動態生成 -->
       </div>
-
-      <!-- 關卡網格卡片 (Grid) -->
-      <div id="levelGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-3xl">
-        <!-- 由 JavaScript 動態繪製 -->
-      </div>
-    </section>
+    </div>
 
     <!-- 2. 遊戲進行畫面 -->
-    <section id="gameScreen" class="hidden w-full flex-col items-center gap-6">
-      <!-- 關卡標題與進度度 -->
-      <div class="w-full flex justify-between items-center bg-amber-100 p-3 px-6 rounded-3xl border-2 border-amber-300 shadow-sm">
-        <span id="levelTitle" class="text-xl font-bold text-amber-900">Level 1</span>
-        <span id="progressText" class="text-xl font-black text-amber-700">剩餘題目: 7</span>
+    <div id="view-game" class="hidden w-full max-w-3xl flex flex-col items-center">
+      <!-- 關卡標題與進度 -->
+      <div class="w-full flex justify-between items-center mb-6">
+        <span id="game-title" class="text-xl sm:text-2xl font-bold text-amber-700"></span>
+        <span id="game-progress" class="text-lg font-bold bg-amber-200 text-amber-900 px-4 py-1 rounded-full"></span>
       </div>
 
-      <!-- 樹狀分支圖區域 (Number Bond) -->
-      <div class="relative w-full max-w-md h-72 flex flex-col items-center justify-between my-2">
-        <!-- SVG 連接線 -->
-        <svg class="absolute inset-0 w-full h-full -z-10 pointer-events-none" viewBox="0 0 300 240">
-          <line x1="150" y1="65" x2="80" y2="175" class="branch-line" />
-          <line x1="150" y1="65" x2="220" y2="175" class="branch-line" />
-        </svg>
+      <!-- 題目顯示區 -->
+      <div class="bg-white rounded-3xl p-6 sm:p-10 shadow-xl w-full text-center border-4 border-amber-300 mb-8">
+        <h3 id="question-text" class="text-3xl sm:text-5xl font-black text-slate-800 tracking-wide mb-6">
+          <!-- 題目內容 -->
+        </h3>
 
-        <!-- 頂端：總數 (大圓圈) -->
-        <div class="flex flex-col items-center">
-          <div id="totalCircle" class="w-28 h-28 rounded-full bg-amber-400 border-4 border-amber-600 shadow-lg flex flex-col items-center justify-center glow-effect">
-            <span class="text-xs text-amber-900 font-bold">總數</span>
-            <span id="totalVal" class="text-4xl font-black text-amber-950">?</span>
-          </div>
-        </div>
-
-        <!-- 下方：兩個分支 (部分 + 部分) -->
-        <div class="w-full flex justify-around items-center px-4">
-          <!-- 左分支 (已知數) -->
-          <div class="flex flex-col items-center">
-            <div id="leftCircle" class="w-24 h-24 rounded-full bg-emerald-200 border-4 border-emerald-500 shadow-md flex flex-col items-center justify-center">
-              <span class="text-xs text-emerald-800 font-bold">左樹枝</span>
-              <span id="leftVal" class="text-3xl font-black text-emerald-950">0</span>
-            </div>
-          </div>
-
-          <!-- 右分支 (目標放置區) -->
-          <div class="flex flex-col items-center">
-            <div id="rightCircle" 
-                 ondragover="allowDrop(event)" 
-                 ondrop="handleDrop(event)" 
-                 class="w-24 h-24 rounded-full bg-white border-4 border-dashed border-amber-500 shadow-inner flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95">
-              <span class="text-xs text-amber-700 font-bold">右樹枝</span>
-              <span id="rightVal" class="text-3xl font-black text-amber-600">?</span>
-            </div>
-          </div>
+        <!-- 放置/目標區 (Drop Area) -->
+        <div id="drop-target" class="w-36 h-36 sm:w-44 sm:h-44 border-4 border-dashed border-amber-400 rounded-3xl bg-amber-50 mx-auto flex items-center justify-center transition-all">
+          <span id="target-placeholder" class="text-slate-400 text-2xl font-bold">拖到這裡</span>
+          <span id="target-text" class="text-5xl sm:text-7xl font-black text-amber-600 hidden"></span>
         </div>
       </div>
 
-      <!-- 反饋提示訊息區 -->
-      <div id="feedbackBox" class="h-8 text-center text-xl font-extrabold text-amber-800"></div>
+      <!-- 反饋訊息 -->
+      <div id="feedback-msg" class="h-10 text-xl font-bold mb-4 text-center transition-opacity opacity-0"></div>
 
-      <!-- 選項按鈕區 (3個極大選項卡片) -->
-      <div class="w-full max-w-xl bg-amber-100 p-4 rounded-3xl border-2 border-amber-200">
-        <p class="text-center font-bold text-amber-800 mb-3 text-lg">👇 請點擊或拖曳正確的橡果數目到右樹枝：</p>
-        <div id="optionsContainer" class="grid grid-cols-3 gap-4">
-          <!-- 選項按鈕由 JS 動態生成 -->
-        </div>
+      <!-- 可選卡片/答案選項 (Draggable / Clickable Options) -->
+      <div id="options-container" class="flex flex-wrap justify-center gap-4 sm:gap-6 w-full">
+        <!-- 選項卡片由 JS 動態生成 -->
       </div>
-    </section>
+    </div>
 
     <!-- 3. 通關獎勵畫面 -->
-    <section id="victoryScreen" class="hidden w-full flex-col items-center justify-center text-center gap-6 py-10">
-      <div class="text-6xl bounce-animation">🎉 🐿️ 🎉</div>
-      <h2 class="text-4xl font-extrabold text-amber-800">太棒了！過關囉！</h2>
-      <p class="text-xl text-amber-700 font-semibold">小松鼠順利把所有橡果都收進寶盒了！</p>
-      
-      <div class="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-xs">
-        <button onclick="retryLevel()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-black text-xl py-4 rounded-2xl shadow-lg border-2 border-white active:scale-95 transition">
-          <i class="fas fa-redo mr-2"></i>再玩一次
-        </button>
-        <button onclick="goHome()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl py-4 rounded-2xl shadow-lg border-2 border-white active:scale-95 transition">
-          <i class="fas fa-th-large mr-2"></i>選單
-        </button>
-      </div>
-    </section>
+    <div id="view-reward" class="hidden text-center bg-white p-8 sm:p-12 rounded-3xl shadow-2xl border-4 border-yellow-300 max-w-lg w-full">
+      <div class="text-6xl mb-4 animate-bounce-short">🎉 ⭐ 🏆</div>
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-amber-600 mb-4">太棒了！全對！</h2>
+      <p class="text-slate-600 text-xl mb-8">你完成了這個關卡！</p>
+      <button onclick="showMainMenu()" class="bg-green-500 hover:bg-green-600 text-white font-black text-2xl py-4 px-10 rounded-full shadow-lg transform transition active:scale-95">
+        再玩一次 🔄
+      </button>
+    </div>
 
   </main>
 
-  <!-- 頁尾提示語 -->
-  <footer class="p-3 text-center text-amber-700/80 font-medium text-sm">
-    專為幼兒學習設計 🌟 數的分解與組合 Number Bonds
+  <!-- 頁腳 -->
+  <footer class="text-center p-4 text-slate-400 text-sm">
+    專為 5 歲幼兒設計的互動學習平台
   </footer>
 
-  <!-- ================================================================= -->
-  <!-- JAVASCRIPT 邏輯與 JSON 題庫設定檔 -->
-  <!-- ================================================================= -->
   <script>
     /* 
-      ==================================================================
-      【JSON 題庫與關卡設定檔 (對照表)】
-      已完全移除語音設定，非程式背景者可在此輕鬆編輯關卡與題庫！
-      ==================================================================
+      ================================================================
+      【內容設定與簡易編輯 (JSON Configuration)】
+      在此可輕鬆編輯、替換或新增遊戲關卡與題庫資料。
+      ================================================================
     */
-    const GAME_CONFIG = [
+    const QUIZ_CONFIG = [
       {
-        levelId: 1,
-        title: "Level 1: 基礎分解 (數字 1 - 3)",
-        description: "學習數字 1、2、3 的分解與組合",
-        bgColor: "bg-orange-100",
-        borderColor: "border-orange-400",
+        id: "level-1",
+        title: "數字大挑戰 1-5",
+        icon: "🔢",
         questions: [
-          // Q1-2: 總數為 1
-          { id: 1, total: 1, left: 0, target: 1 },
-          { id: 2, total: 1, left: 1, target: 0 },
-          // Q3-4: 總數為 2 (包含 0+2 及 1+1)
-          { id: 3, total: 2, left: 0, target: 2 },
-          { id: 4, total: 2, left: 1, target: 1 },
-          // Q5-7: 總數為 3 (每3題遞增)
-          { id: 5, total: 3, left: 0, target: 3 },
-          { id: 6, total: 3, left: 1, target: 2 },
-          { id: 7, total: 3, left: 2, target: 1 }
+          { question: "哪個是數字 1？", answer: "1", options: ["1", "2", "3"] },
+          { question: "哪個是數字 3？", answer: "3", options: ["2", "3", "4"] },
+          { question: "哪個是數字 5？", answer: "5", options: ["3", "4", "5"] },
+          { question: "哪個是數字 2？", answer: "2", options: ["1", "2", "5"] }
         ]
       },
       {
-        levelId: 2,
-        title: "Level 2: 進階分解 (數字 4 - 5)",
-        description: "學習數字 4 與 5 的組合分解",
-        bgColor: "bg-emerald-100",
-        borderColor: "border-emerald-400",
+        id: "level-2",
+        title: "認識基本形狀",
+        icon: "⭐",
         questions: [
-          { id: 1, total: 4, left: 1, target: 3 },
-          { id: 2, total: 4, left: 2, target: 2 },
-          { id: 3, total: 4, left: 0, target: 4 },
-          { id: 4, total: 5, left: 1, target: 4 },
-          { id: 5, total: 5, left: 2, target: 3 },
-          { id: 6, total: 5, left: 3, target: 2 }
+          { question: "請選出「圓形」", answer: "圓形", options: ["圓形", "方形", "三角形"] },
+          { question: "請選出「三角形」", answer: "三角形", options: ["星形", "三角形", "圓形"] },
+          { question: "請選出「方形」", answer: "方形", options: ["方形", "圓形", "心形"] }
         ]
       },
       {
-        levelId: 3,
-        title: "Level 3: 橡果高手 (數字 6 - 8)",
-        description: "挑戰較大的橡果數量組合！",
-        bgColor: "bg-blue-100",
-        borderColor: "border-blue-400",
+        id: "level-3",
+        title: "基礎顏色辨識",
+        icon: "🎨",
         questions: [
-          { id: 1, total: 6, left: 3, target: 3 },
-          { id: 2, total: 6, left: 2, target: 4 },
-          { id: 3, total: 7, left: 5, target: 2 },
-          { id: 4, total: 7, left: 3, target: 4 },
-          { id: 5, total: 8, left: 5, target: 3 },
-          { id: 6, total: 8, left: 4, target: 4 }
+          { question: "請點擊「紅色」", answer: "紅色", options: ["紅色", "藍色", "黃色"] },
+          { question: "請點擊「黃色」", answer: "黃色", options: ["綠色", "黃色", "紅色"] },
+          { question: "請點擊「綠色」", answer: "綠色", options: ["藍色", "紫色", "綠色"] }
         ]
       },
       {
-        levelId: 4,
-        title: "Level 4: 樹洞挑戰 (數字 9 - 10)",
-        description: "挑戰數字 9 與 10 的終極組合！",
-        bgColor: "bg-purple-100",
-        borderColor: "border-purple-400",
+        id: "level-4",
+        title: "動物世界",
+        icon: "🐱",
         questions: [
-          { id: 1, total: 9, left: 4, target: 5 },
-          { id: 2, total: 9, left: 6, target: 3 },
-          { id: 3, total: 10, left: 5, target: 5 },
-          { id: 4, total: 10, left: 2, target: 8 },
-          { id: 5, total: 10, left: 7, target: 3 }
+          { question: "誰會「喵喵」叫？", answer: "小貓", options: ["小狗", "小貓", "小鳥"] },
+          { question: "誰會「汪汪」叫？", answer: "小狗", options: ["小狗", "小鴨", "小豬"] },
+          { question: "誰在水裡游泳？", answer: "小魚", options: ["小兔", "小魚", "小雞"] }
         ]
       },
       {
-        levelId: 5,
-        title: "Level 5: 橡果大師 (綜合挑戰)",
-        description: "綜合練習所有的數分解！",
-        bgColor: "bg-rose-100",
-        borderColor: "border-rose-400",
+        id: "level-5",
+        title: "簡單加減法",
+        icon: "➕",
         questions: [
-          { id: 1, total: 5, left: 0, target: 5 },
-          { id: 2, total: 7, left: 2, target: 5 },
-          { id: 3, total: 8, left: 2, target: 6 },
-          { id: 4, total: 10, left: 4, target: 6 },
-          { id: 5, total: 6, left: 1, target: 5 }
+          { question: "1 + 1 = ?", answer: "2", options: ["1", "2", "3"] },
+          { question: "2 + 1 = ?", answer: "3", options: ["2", "3", "4"] },
+          { question: "3 - 1 = ?", answer: "2", options: ["1", "2", "4"] }
         ]
       }
     ];
 
-    /* -----------------------------------------------------------------
-       遊戲狀態管理 (State Management)
-       ----------------------------------------------------------------- */
+    /* 
+      ================================================================
+      【遊戲核心邏輯 (Vanilla JS)】
+      ================================================================
+    */
     let currentLevelIndex = 0;
-    let currentQuestionQueue = [];
     let currentQuestionIndex = 0;
-    let selectedOption = null;
+    let activeQuestions = [];
+    let draggedAnswer = null;
 
-    /* -----------------------------------------------------------------
-       初始化與選單渲染
-       ----------------------------------------------------------------- */
-    window.addEventListener('DOMContentLoaded', () => {
+    // 頁面初始化
+    document.addEventListener("DOMContentLoaded", () => {
       renderMenu();
+      setupDropTarget();
     });
 
-    function renderMenu() {
-      const grid = document.getElementById('levelGrid');
-      grid.innerHTML = '';
+    // 顯示首頁選單
+    function showMainMenu() {
+      document.getElementById("view-menu").classList.remove("hidden");
+      document.getElementById("view-game").classList.add("hidden");
+      document.getElementById("view-reward").classList.add("hidden");
+      document.getElementById("btn-home").classList.add("hidden");
+      document.getElementById("app-title").textContent = "🌟 幼兒趣味學習樂園 🌟";
+    }
 
-      GAME_CONFIG.forEach((level, idx) => {
-        const card = document.createElement('div');
-        card.className = `${level.bgColor} border-4 ${level.borderColor} rounded-3xl p-6 shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer flex flex-col justify-between items-center text-center gap-3`;
-        card.onclick = () => startLevel(idx);
+    // 渲染關卡選單
+    function renderMenu() {
+      const grid = document.getElementById("game-grid");
+      grid.innerHTML = "";
+
+      QUIZ_CONFIG.forEach((level, index) => {
+        const card = document.createElement("button");
+        card.className = "bg-white p-6 rounded-3xl shadow-lg border-4 border-amber-200 hover:border-amber-400 flex flex-col items-center justify-center transform transition active:scale-95";
+        card.onclick = () => startLevel(index);
 
         card.innerHTML = `
-          <div class="text-4xl">🌰</div>
-          <h3 class="text-2xl font-black text-gray-800">${level.title}</h3>
-          <p class="text-amber-800 font-medium text-sm">${level.description}</p>
-          <span class="bg-amber-500 text-white font-bold px-5 py-2 rounded-2xl border border-white shadow-sm mt-2">開始遊戲</span>
+          <span class="text-6xl mb-3">${level.icon}</span>
+          <span class="text-2xl font-black text-slate-800">${level.title}</span>
+          <span class="text-sm font-bold text-slate-400 mt-2">${level.questions.length} 題測驗</span>
         `;
         grid.appendChild(card);
       });
     }
 
-    /* -----------------------------------------------------------------
-       關卡與題目控制
-       ----------------------------------------------------------------- */
+    // 開始關卡
     function startLevel(index) {
       currentLevelIndex = index;
-      const level = GAME_CONFIG[currentLevelIndex];
-      
-      // 複製題庫並做初始準備
-      currentQuestionQueue = [...level.questions];
+      const levelData = QUIZ_CONFIG[index];
+      // 複製並洗牌題目陣列
+      activeQuestions = [...levelData.questions].sort(() => Math.random() - 0.5);
       currentQuestionIndex = 0;
 
-      // 切換畫面
-      document.getElementById('menuScreen').classList.add('hidden');
-      document.getElementById('victoryScreen').classList.add('hidden');
-      document.getElementById('gameScreen').classList.remove('hidden');
-      document.getElementById('gameScreen').classList.add('flex');
-      document.getElementById('homeBtn').classList.remove('hidden');
+      document.getElementById("view-menu").classList.add("hidden");
+      document.getElementById("view-game").classList.remove("hidden");
+      document.getElementById("view-reward").classList.add("hidden");
+      document.getElementById("btn-home").classList.remove("hidden");
+      document.getElementById("game-title").textContent = levelData.title;
 
       loadQuestion();
     }
 
+    // 載入當前題目
     function loadQuestion() {
-      const level = GAME_CONFIG[currentLevelIndex];
-      const q = currentQuestionQueue[currentQuestionIndex];
+      const total = activeQuestions.length;
+      const current = activeQuestions[currentQuestionIndex];
 
-      // 清空提示訊息
-      showFeedback("");
+      // 重置放置區與訊息
+      resetDropZone();
+      showFeedback("", "");
 
-      // 更新進度顯示
-      document.getElementById('levelTitle').innerText = level.title;
-      document.getElementById('progressText').innerText = `剩餘題目: ${currentQuestionQueue.length}`;
+      // 更新進度與題目
+      document.getElementById("game-progress").textContent = `${currentQuestionIndex + 1} / ${total}`;
+      document.getElementById("question-text").textContent = current.question;
 
-      // 更新樹狀圖數字
-      document.getElementById('totalVal').innerText = q.total;
-      document.getElementById('leftVal').innerText = q.left;
-      document.getElementById('rightVal').innerText = '?';
+      // 生成選項卡片 (純數字或純文字，無多餘提示標籤)
+      const optionsContainer = document.getElementById("options-container");
+      optionsContainer.innerHTML = "";
 
-      // 生成選項 (包含 1 個正確答案與 2 個乾淨干擾項，並確保位置隨機)
-      generateOptions(q);
-    }
+      // 打亂選項順序
+      const shuffledOptions = [...current.options].sort(() => Math.random() - 0.5);
 
-    /* -----------------------------------------------------------------
-       選項動態生成 (確保位置隨機且不重複)
-       ----------------------------------------------------------------- */
-    function generateOptions(q) {
-      const container = document.getElementById('optionsContainer');
-      container.innerHTML = '';
+      shuffledOptions.forEach(opt => {
+        const btn = document.createElement("div");
+        btn.className = "draggable bg-white border-4 border-amber-300 rounded-2xl shadow-md p-4 sm:p-6 text-3xl sm:text-5xl font-black text-slate-800 flex items-center justify-center min-w-[100px] min-h-[100px] active:scale-95 transition-transform";
+        btn.setAttribute("draggable", "true");
+        btn.textContent = opt;
 
-      const correctAnswer = q.target;
-      let distractorSet = new Set();
+        // 點擊事件 (適合觸控/單擊操作)
+        btn.onclick = () => checkAnswer(opt);
 
-      // 隨機產生 2 個不同的干擾選項 (範圍在 0 ~ total 之間，不與答案重複)
-      while (distractorSet.size < 2) {
-        let fake = Math.floor(Math.random() * (q.total + 3));
-        if (fake !== correctAnswer) {
-          distractorSet.add(fake);
-        }
-      }
+        // 拖拽事件 (Drag & Drop)
+        btn.addEventListener("dragstart", (e) => {
+          draggedAnswer = opt;
+          e.dataTransfer.setData("text/plain", opt);
+        });
 
-      let options = [correctAnswer, ...Array.from(distractorSet)];
-
-      // 隨機打亂選項順序
-      options.sort(() => Math.random() - 0.5);
-
-      options.forEach(num => {
-        const btn = document.createElement('div');
-        btn.draggable = true;
-        btn.setAttribute('ondragstart', `handleDragStart(event, ${num})`);
-        btn.onclick = () => selectAndCheck(num);
-
-        btn.className = `bg-amber-300 hover:bg-amber-400 active:scale-95 border-4 border-amber-600 rounded-3xl p-4 flex flex-col items-center justify-center cursor-pointer shadow-md transition touch-manipulation`;
-        
-        btn.innerHTML = `
-          <span class="text-3xl font-black text-amber-950">${num}</span>
-          <span class="text-xs font-bold text-amber-800">🌰 橡果</span>
-        `;
-
-        container.appendChild(btn);
+        optionsContainer.appendChild(btn);
       });
     }
 
-    /* -----------------------------------------------------------------
-       拖曳 (Drag & Drop) 與點擊操作處理
-       ----------------------------------------------------------------- */
-    function handleDragStart(event, value) {
-      selectedOption = value;
-      event.dataTransfer.setData("text/plain", value);
+    // 設定放置目標區 (Drop Target)
+    function setupDropTarget() {
+      const target = document.getElementById("drop-target");
+
+      target.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        target.classList.add("dropzone-highlight");
+      });
+
+      target.addEventListener("dragleave", () => {
+        target.classList.remove("dropzone-highlight");
+      });
+
+      target.addEventListener("drop", (e) => {
+        e.preventDefault();
+        target.classList.remove("dropzone-highlight");
+        const val = e.dataTransfer.getData("text/plain") || draggedAnswer;
+        if (val) {
+          checkAnswer(val);
+        }
+      });
     }
 
-    function allowDrop(event) {
-      event.preventDefault();
-    }
+    // 檢查答案
+    function checkAnswer(selectedOption) {
+      const current = activeQuestions[currentQuestionIndex];
+      const isCorrect = (selectedOption === current.answer);
 
-    function handleDrop(event) {
-      event.preventDefault();
-      if (selectedOption !== null) {
-        checkAnswer(selectedOption);
-        selectedOption = null;
-      }
-    }
+      // 更新放置區顯示純文字/數字
+      const placeholder = document.getElementById("target-placeholder");
+      const targetText = document.getElementById("target-text");
+      placeholder.classList.add("hidden");
+      targetText.classList.remove("hidden");
+      targetText.textContent = selectedOption;
 
-    function selectAndCheck(val) {
-      checkAnswer(val);
-    }
-
-    function showFeedback(text, isError = false) {
-      const fb = document.getElementById('feedbackBox');
-      fb.innerText = text;
-      fb.className = `h-8 text-center text-xl font-extrabold ${isError ? 'text-red-600' : 'text-emerald-600'}`;
-    }
-
-    /* -----------------------------------------------------------------
-       答案驗證與錯誤重試機制
-       ----------------------------------------------------------------- */
-    function checkAnswer(userAnswer) {
-      const q = currentQuestionQueue[currentQuestionIndex];
-
-      if (userAnswer === q.target) {
-        // --- 答對處理 ---
-        document.getElementById('rightVal').innerText = userAnswer;
-        showFeedback("✨ 答對了！");
-
-        // 正確視覺效果
-        const rightCircle = document.getElementById('rightCircle');
-        rightCircle.classList.add('bg-emerald-300', 'border-emerald-600');
+      if (isCorrect) {
+        showFeedback("太棒了！答對了！ ✨", "text-green-600");
         
+        // 延遲後進入下一題或結算
         setTimeout(() => {
-          rightCircle.classList.remove('bg-emerald-300', 'border-emerald-600');
-          
-          // 移除已答對的題目
-          currentQuestionQueue.splice(currentQuestionIndex, 1);
-
-          if (currentQuestionQueue.length === 0) {
-            // 所有題目均完成 -> 通關
-            showVictory();
-          } else {
-            // 隨機抽選下一題
-            currentQuestionIndex = Math.floor(Math.random() * currentQuestionQueue.length);
+          currentQuestionIndex++;
+          if (currentQuestionIndex < activeQuestions.length) {
             loadQuestion();
+          } else {
+            showRewardScreen();
           }
         }, 1200);
-
       } else {
-        // --- 答錯處理 (溫和提示並重新抽問) ---
-        showFeedback("😅 差少少，再試一次！", true);
+        showFeedback("再試一次看看喔！ 💪", "text-amber-600");
         
-        const rightCircle = document.getElementById('rightCircle');
-        rightCircle.classList.add('bg-red-200', 'border-red-500');
+        // 答錯時重置放置區，並將該題移至隊尾重新抽問
+        const missedQuestion = activeQuestions.splice(currentQuestionIndex, 1)[0];
+        activeQuestions.push(missedQuestion);
 
         setTimeout(() => {
-          rightCircle.classList.remove('bg-red-200', 'border-red-500');
-          
-          // 隨機更換題目索引 (如果隊列中有超過 1 題)
-          if (currentQuestionQueue.length > 1) {
-            let nextIdx = currentQuestionIndex;
-            while (nextIdx === currentQuestionIndex) {
-              nextIdx = Math.floor(Math.random() * currentQuestionQueue.length);
-            }
-            currentQuestionIndex = nextIdx;
-          }
           loadQuestion();
-        }, 1000);
+        }, 1200);
       }
     }
 
-    /* -----------------------------------------------------------------
-       通關獎勵 (Confetti 慶祝特效)
-       ----------------------------------------------------------------- */
-    function showVictory() {
-      document.getElementById('gameScreen').classList.add('hidden');
-      document.getElementById('victoryScreen').classList.remove('hidden');
-      document.getElementById('victoryScreen').classList.add('flex');
+    // 重置放置區
+    function resetDropZone() {
+      const placeholder = document.getElementById("target-placeholder");
+      const targetText = document.getElementById("target-text");
+      placeholder.classList.remove("hidden");
+      targetText.classList.add("hidden");
+      targetText.textContent = "";
+    }
 
-      // 觸發五彩紙屑煙火動畫
-      if (typeof confetti === 'function') {
+    // 顯示反饋文字
+    function showFeedback(msg, colorClass) {
+      const el = document.getElementById("feedback-msg");
+      el.textContent = msg;
+      el.className = `h-10 text-xl sm:text-2xl font-bold mb-4 text-center transition-opacity duration-300 ${colorClass}`;
+      el.style.opacity = msg ? "1" : "0";
+    }
+
+    // 顯示過關獎勵
+    function showRewardScreen() {
+      document.getElementById("view-game").classList.add("hidden");
+      document.getElementById("view-reward").classList.remove("hidden");
+
+      // 觸發五彩紙屑特效 (Canvas Confetti)
+      if (typeof confetti === "function") {
         confetti({
-          particleCount: 150,
-          spread: 90,
+          particleCount: 120,
+          spread: 80,
           origin: { y: 0.6 }
         });
       }
-    }
-
-    function retryLevel() {
-      startLevel(currentLevelIndex);
-    }
-
-    function goHome() {
-      document.getElementById('gameScreen').classList.add('hidden');
-      document.getElementById('victoryScreen').classList.add('hidden');
-      document.getElementById('homeBtn').classList.add('hidden');
-      document.getElementById('menuScreen').classList.remove('hidden');
-      renderMenu();
     }
   </script>
 </body>
