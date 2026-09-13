@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>數數點點仔 - 幼兒數感練習平台</title>
+  <title>數數點點仔 - 幼兒加減法練習平台</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Canvas Confetti CDN -->
@@ -28,25 +28,27 @@
       background-color: #fef08a;
       border-color: #f59e0b;
     }
-    /* 圓點卡片內部 5 個一排排版 */
+    /* 圓點排版：每 5 個一排 */
     .dot-grid {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
+      gap: 6px;
       justify-items: center;
       align-items: center;
+      padding: 6px;
     }
     .dot-circle {
-      width: 24px;
-      height: 24px;
-      background-color: #0284c7; /* 經典深藍色圓點 */
+      width: 20px;
+      height: 20px;
+      background-color: #0284c7;
       border-radius: 50%;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.25);
     }
     @media (min-width: 768px) {
       .dot-circle {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
+        gap: 8px;
       }
     }
   </style>
@@ -64,11 +66,11 @@
   <!-- 主要內容區 -->
   <main class="container mx-auto px-4 py-6 flex-grow flex flex-col justify-center items-center">
 
-    <!-- 1. 首頁選單 -->
+    <!-- 1. 首頁關卡選單 -->
     <div id="mainMenu" class="w-full max-w-4xl space-y-6">
       <div class="text-center mb-8">
         <h2 class="text-3xl md:text-4xl font-black text-sky-900 mb-2">請選擇關卡</h2>
-        <p class="text-sky-800 text-lg font-bold">一起來數一數有多少個點點仔！</p>
+        <p class="text-sky-800 text-lg font-bold">一起來數點點，挑戰加法與減法！</p>
       </div>
       <div id="levelGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- 關卡卡片由 JS 動態生成 -->
@@ -76,8 +78,8 @@
     </div>
 
     <!-- 2. 遊戲進行畫面 -->
-    <div id="gameArea" class="w-full max-w-3xl hidden flex-col items-center space-y-6">
-      <!-- 關卡名稱與進度條 -->
+    <div id="gameArea" class="w-full max-w-4xl hidden flex-col items-center space-y-6">
+      <!-- 關卡標題與進度條 -->
       <div class="w-full flex justify-between items-center px-4">
         <span id="levelDisplayTitle" class="text-xl font-extrabold text-sky-900">關卡</span>
         <span id="progressText" class="text-xl font-black text-sky-700">第 1 / 15 題</span>
@@ -86,71 +88,73 @@
         <div id="progressBar" class="bg-sky-500 h-full w-0 rounded-full transition-all duration-300"></div>
       </div>
 
-      <!-- 題目顯示區 -->
-      <div class="flex flex-col items-center justify-center gap-6 w-full my-4">
-        <!-- 點點仔/數字題目顯示卡片 -->
-        <div id="questionCard" class="bg-white border-4 border-sky-300 rounded-3xl p-6 md:p-8 min-w-[280px] min-h-[160px] flex items-center justify-center shadow-lg">
-          <!-- 內容由 JS 動態生成 -->
-        </div>
+      <!-- 題目顯示區： (卡片 1) [ + / - ] (卡片 2) = [ ? ] -->
+      <div class="flex flex-wrap items-center justify-center gap-3 md:gap-6 w-full my-4 bg-white p-6 rounded-3xl border-4 border-sky-300 shadow-lg">
+        <!-- 被算數卡片 -->
+        <div id="num1Card" class="bg-sky-100 border-2 border-sky-300 rounded-2xl p-4 min-w-[100px] min-h-[100px] flex items-center justify-center"></div>
+        
+        <!-- 運算符號 (+ / -) -->
+        <span id="operatorSymbol" class="text-4xl md:text-6xl font-black text-sky-600">+</span>
 
-        <!-- 放置答案目標區 (Drop Zone) -->
-        <div class="flex items-center gap-3">
-          <span class="text-xl font-extrabold text-sky-900">數量是：</span>
-          <div id="answerBox" class="drop-zone border-4 border-dashed border-sky-400 bg-sky-100 rounded-3xl w-24 h-24 md:w-28 md:h-28 flex items-center justify-center text-4xl md:text-5xl font-black text-sky-900 shadow-inner">
-            ?
-          </div>
+        <!-- 運算數卡片 -->
+        <div id="num2Card" class="bg-sky-100 border-2 border-sky-300 rounded-2xl p-4 min-w-[100px] min-h-[100px] flex items-center justify-center"></div>
+
+        <span class="text-4xl md:text-6xl font-black text-sky-600">=</span>
+
+        <!-- 答案目標框 (Drop Zone) -->
+        <div id="answerBox" class="drop-zone border-4 border-dashed border-sky-400 bg-sky-50 rounded-2xl w-24 h-24 md:w-28 md:h-28 flex items-center justify-center text-4xl md:text-5xl font-black text-sky-900 shadow-inner">
+          ?
         </div>
       </div>
 
-      <!-- 答案選項卡片區 -->
+      <!-- 選項卡片區 -->
       <div class="w-full mt-2">
-        <p class="text-center text-sky-800 font-bold mb-4 text-lg">點擊或將正確數字拖拽到框框：</p>
-        <div id="optionsContainer" class="flex flex-wrap justify-center gap-4">
-          <!-- 選項按鈕由 JS 動態生成 -->
-        </div>
+        <p class="text-center text-sky-800 font-bold mb-4 text-lg">點擊或將正確答案拖到「?」框內：</p>
+        <div id="optionsContainer" class="flex flex-wrap justify-center gap-4"></div>
       </div>
     </div>
 
-    <!-- 3. 結算/獎勵 Modal -->
+    <!-- 3. 獎勵通關 Modal -->
     <div id="rewardModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl transform transition-all">
+      <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
         <div class="text-8xl animate-bounce">🏆</div>
         <h3 id="rewardTitle" class="text-3xl font-black text-sky-600">數數小專家！</h3>
-        <p id="rewardDesc" class="text-slate-600 text-lg font-bold">你太棒了！順利完成了所有題目！</p>
-        <div class="flex flex-col gap-3">
-          <button onclick="showMainMenu()" class="bg-sky-400 text-sky-950 font-bold text-xl py-4 rounded-2xl shadow-lg hover:bg-sky-500 btn-bounce">
-            再玩一次 / 回首頁
-          </button>
-        </div>
+        <p id="rewardDesc" class="text-slate-600 text-lg font-bold">太棒了！你順利完成了所有題目！</p>
+        <button onclick="showMainMenu()" class="w-full bg-sky-400 text-sky-950 font-bold text-xl py-4 rounded-2xl shadow-lg hover:bg-sky-500 btn-bounce">
+          再玩一次 / 回首頁
+        </button>
       </div>
     </div>
 
   </main>
 
   <footer class="text-center py-4 text-sky-800 text-sm font-bold">
-    數數點點仔 幼兒數感互動練習平台
+    數數點點仔 幼兒數感練習平台
   </footer>
 
-  <!-- JS 邏輯區 -->
   <script>
     /* ==========================================================================
-       【頂層 JSON 設定檔】
+       【頂層 JSON 設定檔】簡易編輯區
        ========================================================================== */
     const GAME_CONFIG = {
       levels: [
         {
           id: 1,
-          title: "Level 1: 數數點點仔基礎大挑戰",
-          desc: "15題綜合練習 (點點仔 1-15 & 數字 1-5)",
-          color: "bg-sky-400 hover:bg-sky-500 text-white",
-          type: "level1"
+          mode: "add",
+          title: "Level 1: 點點加法大挑戰",
+          desc: "共 15 題 (Q1-5: 1-5點 | Q6-10: 1-5數字 | Q11-13: 6-10點 | Q14-15: 10-15點)",
+          color: "bg-sky-400 hover:bg-sky-500 text-white"
+        },
+        {
+          id: 2,
+          mode: "sub",
+          title: "Level 2: 點點減法大挑戰",
+          desc: "共 15 題 (Q1-5: 1-5點 | Q6-10: 1-5數字 | Q11-13: 6-10點 | Q14-15: 10-15點)",
+          color: "bg-emerald-500 hover:bg-emerald-600 text-white"
         }
       ]
     };
 
-    /* ==========================================================================
-       核心邏輯 (Vanilla JS)
-       ========================================================================== */
     let currentLevel = null;
     let currentQuestionIndex = 0;
     let questionsList = [];
@@ -160,7 +164,6 @@
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    // 初始化選單
     function initMenu() {
       const grid = document.getElementById("levelGrid");
       grid.innerHTML = "";
@@ -171,7 +174,7 @@
         card.innerHTML = `
           <h3 class="text-2xl font-black">${lvl.title}</h3>
           <p class="text-lg opacity-90">${lvl.desc}</p>
-          <div class="self-end bg-white/20 px-4 py-1.5 rounded-full text-sm font-black">開始關卡 ➔</div>
+          <div class="self-end bg-white/20 px-4 py-1.5 rounded-full text-sm font-black">開始遊戲 ➔</div>
         `;
         grid.appendChild(card);
       });
@@ -185,32 +188,49 @@
       document.getElementById("headerTitle").innerText = "數數點點仔";
     }
 
-    // 動態題目生成器 (嚴格遵循 Q1-5, Q6-10, Q11-13, Q14-15 規則)
-    function generateQuestions() {
+    // 動態題目生成器 (加法與減法模組)
+    function generateQuestions(mode) {
       let list = [];
 
-      // Q1 - Q5: 圓點圖案 (範圍 1 - 5)
+      // 加法對數生成
+      function makeAddPair(minSum, maxSum) {
+        let sum = getRandomInt(minSum, maxSum);
+        let v1 = getRandomInt(1, sum - 1 || 1);
+        let v2 = sum - v1;
+        return { v1, v2, ans: sum };
+      }
+
+      // 減法對數生成 (v1 - v2 = ans, 確保結果 >= 0)
+      function makeSubPair(minRange, maxRange) {
+        let v1 = getRandomInt(minRange, maxRange);
+        let v2 = getRandomInt(1, v1); // 確保結果大於等於 0
+        return { v1, v2, ans: v1 - v2 };
+      }
+
+      const maker = (mode === "add") ? makeAddPair : makeSubPair;
+
+      // Q1 - Q5: 點點圖案 (範圍 1 - 5)
       for (let i = 0; i < 5; i++) {
-        let count = getRandomInt(1, 5);
-        list.push({ displayType: "dots", value: count, ans: count });
+        let p = maker(2, 5);
+        list.push({ type: "dots", val1: p.v1, val2: p.v2, ans: p.ans, op: mode === "add" ? "+" : "-" });
       }
 
       // Q6 - Q10: 數字 (範圍 1 - 5)
       for (let i = 0; i < 5; i++) {
-        let count = getRandomInt(1, 5);
-        list.push({ displayType: "number", value: count, ans: count });
+        let p = maker(2, 5);
+        list.push({ type: "number", val1: p.v1, val2: p.v2, ans: p.ans, op: mode === "add" ? "+" : "-" });
       }
 
-      // Q11 - Q13: 圓點圖案 (範圍 6 - 10，每 5 個一排)
+      // Q11 - Q13: 點點圖案 (範圍 6 - 10，每 5 點一排)
       for (let i = 0; i < 3; i++) {
-        let count = getRandomInt(6, 10);
-        list.push({ displayType: "dots", value: count, ans: count });
+        let p = maker(6, 10);
+        list.push({ type: "dots", val1: p.v1, val2: p.v2, ans: p.ans, op: mode === "add" ? "+" : "-" });
       }
 
-      // Q14 - Q15: 圓點圖案 (範圍 10 - 15，每 5 個一排)
+      // Q14 - Q15: 點點圖案 (範圍 10 - 15，每 5 點一排)
       for (let i = 0; i < 2; i++) {
-        let count = getRandomInt(10, 15);
-        list.push({ displayType: "dots", value: count, ans: count });
+        let p = maker(10, 15);
+        list.push({ type: "dots", val1: p.v1, val2: p.v2, ans: p.ans, op: mode === "add" ? "+" : "-" });
       }
 
       return list;
@@ -219,7 +239,7 @@
     function startLevel(level) {
       currentLevel = level;
       currentQuestionIndex = 0;
-      questionsList = generateQuestions();
+      questionsList = generateQuestions(level.mode);
 
       document.getElementById("mainMenu").classList.add("hidden");
       document.getElementById("gameArea").classList.remove("hidden");
@@ -231,7 +251,7 @@
       renderQuestion();
     }
 
-    // 渲染圓點 (每 5 個一排)
+    // 產生每 5 個一排的圓點 HTML
     function createDotsHTML(count) {
       let dotsHTML = '';
       for (let i = 0; i < count; i++) {
@@ -240,7 +260,6 @@
       return `<div class="dot-grid">${dotsHTML}</div>`;
     }
 
-    // 載入當前題目
     function renderQuestion() {
       currentQuestion = questionsList[currentQuestionIndex];
 
@@ -249,29 +268,36 @@
       document.getElementById("progressText").innerText = `第 ${currentQuestionIndex + 1} / ${total} 題`;
       document.getElementById("progressBar").style.width = `${((currentQuestionIndex + 1) / total) * 100}%`;
 
-      // 渲染題目區
-      const qCard = document.getElementById("questionCard");
-      if (currentQuestion.displayType === "dots") {
-        qCard.innerHTML = createDotsHTML(currentQuestion.value);
+      // 設定運算符號
+      document.getElementById("operatorSymbol").innerText = currentQuestion.op;
+
+      // 渲染被算數與運算數
+      const n1Card = document.getElementById("num1Card");
+      const n2Card = document.getElementById("num2Card");
+
+      if (currentQuestion.type === "dots") {
+        n1Card.innerHTML = createDotsHTML(currentQuestion.val1);
+        n2Card.innerHTML = createDotsHTML(currentQuestion.val2);
       } else {
-        qCard.innerHTML = `<span class="text-6xl md:text-7xl font-black text-sky-600">${currentQuestion.value}</span>`;
+        n1Card.innerHTML = `<span class="text-5xl font-black text-sky-600">${currentQuestion.val1}</span>`;
+        n2Card.innerHTML = `<span class="text-5xl font-black text-sky-600">${currentQuestion.val2}</span>`;
       }
 
-      // 重置答案放置區
+      // 重置答案框
       const answerBox = document.getElementById("answerBox");
       answerBox.innerText = "?";
-      answerBox.classList.remove("bg-emerald-200", "border-emerald-500", "text-emerald-800");
+      answerBox.className = "drop-zone border-4 border-dashed border-sky-400 bg-sky-50 rounded-2xl w-24 h-24 md:w-28 md:h-28 flex items-center justify-center text-4xl md:text-5xl font-black text-sky-900 shadow-inner";
 
-      // 生成答案選項卡片 (以正解為基準隨機干擾)
+      // 選項生成
       const optionsContainer = document.getElementById("optionsContainer");
       optionsContainer.innerHTML = "";
 
       let options = [currentQuestion.ans];
       while (options.length < 4) {
-        let rand = getRandomInt(1, 15);
+        let rand = getRandomInt(0, 15);
         if (!options.includes(rand)) options.push(rand);
       }
-      options.sort((a, b) => a - b); // 由小到大排列
+      options.sort((a, b) => a - b);
 
       options.forEach(num => {
         const btn = document.createElement("div");
@@ -280,34 +306,25 @@
         btn.setAttribute("draggable", "true");
 
         btn.onclick = () => checkAnswer(num);
-
-        btn.ondragstart = (e) => {
-          e.dataTransfer.setData("text/plain", num.toString());
-        };
+        btn.ondragstart = (e) => e.dataTransfer.setData("text/plain", num.toString());
 
         optionsContainer.appendChild(btn);
       });
 
-      // Drag and Drop 放置設定
-      answerBox.ondragover = (e) => {
-        e.preventDefault();
-        answerBox.classList.add("drag-over");
-      };
-      answerBox.ondragleave = () => {
-        answerBox.classList.remove("drag-over");
-      };
+      // Drag and Drop 綁定
+      answerBox.ondragover = (e) => { e.preventDefault(); answerBox.classList.add("drag-over"); };
+      answerBox.ondragleave = () => answerBox.classList.remove("drag-over");
       answerBox.ondrop = (e) => {
         e.preventDefault();
         answerBox.classList.remove("drag-over");
         const val = e.dataTransfer.getData("text/plain");
-        if (val) checkAnswer(parseInt(val, 10));
+        if (val !== null && val !== "") checkAnswer(parseInt(val, 10));
       };
     }
 
-    // 檢查答案
     function checkAnswer(selectedVal) {
+      const answerBox = document.getElementById("answerBox");
       if (selectedVal === currentQuestion.ans) {
-        const answerBox = document.getElementById("answerBox");
         answerBox.innerText = selectedVal;
         answerBox.classList.add("bg-emerald-200", "border-emerald-500", "text-emerald-800");
 
@@ -320,12 +337,11 @@
           }
         }, 1000);
       } else {
-        // 答錯溫和重試
+        // 答錯溫和重試機制 (加入佇列重新抽問)
         questionsList.push(currentQuestion);
-        
-        const answerBox = document.getElementById("answerBox");
         answerBox.innerText = selectedVal;
         answerBox.classList.add("bg-rose-200", "border-rose-500", "text-rose-800");
+
         setTimeout(() => {
           answerBox.innerText = "?";
           answerBox.classList.remove("bg-rose-200", "border-rose-500", "text-rose-800");
@@ -333,23 +349,12 @@
       }
     }
 
-    // 獎勵通關
     function showLevelReward() {
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 }
-      });
-
-      const modal = document.getElementById("rewardModal");
-      document.getElementById("rewardTitle").innerText = "🏆 數數小專家！";
-      document.getElementById("rewardDesc").innerText = `太棒了！你順利完成了全部 15 道題目！`;
-      modal.classList.remove("hidden");
+      confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 } });
+      document.getElementById("rewardModal").classList.remove("hidden");
     }
 
-    window.onload = () => {
-      initMenu();
-    };
+    window.onload = initMenu;
   </script>
 </body>
 </html>
