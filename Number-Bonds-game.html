@@ -77,10 +77,10 @@
 
     <!-- 2. 遊戲進行畫面 -->
     <section id="gameScreen" class="hidden w-full flex-col items-center gap-6">
-      <!-- 關卡標題與進度度 -->
+      <!-- 關卡標題與進度條 -->
       <div class="w-full flex justify-between items-center bg-amber-100 p-3 px-6 rounded-3xl border-2 border-amber-300 shadow-sm">
         <span id="levelTitle" class="text-xl font-bold text-amber-900">Level 1</span>
-        <span id="progressText" class="text-xl font-black text-amber-700">剩餘題目: 7</span>
+        <span id="progressText" class="text-xl font-black text-amber-700">剩餘題目: 10</span>
       </div>
 
       <!-- 樹狀分支圖區域 (Number Bond) -->
@@ -122,7 +122,7 @@
       <!-- 反饋提示訊息區 -->
       <div id="feedbackBox" class="h-8 text-center text-xl font-extrabold text-amber-800"></div>
 
-      <!-- 選項按鈕區 (3個極大選項卡片) -->
+      <!-- 選項按鈕區 -->
       <div class="w-full max-w-xl bg-amber-100 p-4 rounded-3xl border-2 border-amber-200">
         <p class="text-center font-bold text-amber-800 mb-3 text-lg">👇 請點擊或拖曳正確的答案：</p>
         <div id="optionsContainer" class="grid grid-cols-3 gap-4">
@@ -155,19 +155,39 @@
   </footer>
 
   <!-- ================================================================= -->
-  <!-- JAVASCRIPT 邏輯與 JSON 題庫設定檔 -->
+  <!-- JAVASCRIPT 邏輯與題庫自動生成機制 -->
   <!-- ================================================================= -->
   <script>
-    /* 
-      ==================================================================
-      【JSON 題庫與關卡設定檔 (對照表)】
-      ==================================================================
-    */
+    /* Helper: 自動生成特定數字組合的 10 道題 */
+    function generateTargetQuestions(targetNum, count = 10) {
+      const qList = [];
+      for (let i = 0; i < count; i++) {
+        // left 可以從 0 到 targetNum
+        const left = Math.floor(Math.random() * (targetNum + 1));
+        const target = targetNum - left;
+        qList.push({ id: i + 1, total: targetNum, left, target });
+      }
+      return qList;
+    }
+
+    /* Helper: 生成綜合關卡題庫 */
+    function generateMixQuestions(count = 10) {
+      const qList = [];
+      for (let i = 0; i < count; i++) {
+        const total = Math.floor(Math.random() * 10) + 1; // 1 ~ 10
+        const left = Math.floor(Math.random() * (total + 1));
+        const target = total - left;
+        qList.push({ id: i + 1, total, left, target });
+      }
+      return qList;
+    }
+
+    /* 關卡清單設定 */
     const GAME_CONFIG = [
       {
         levelId: 1,
         title: "Level 1: 基礎分解 (數字 1 - 3)",
-        description: "學習數字 1、2、3 的分解與組合",
+        description: "學習數字 1、2、3 的基礎分解",
         bgColor: "bg-orange-100",
         borderColor: "border-orange-400",
         questions: [
@@ -175,68 +195,77 @@
           { id: 2, total: 1, left: 1, target: 0 },
           { id: 3, total: 2, left: 0, target: 2 },
           { id: 4, total: 2, left: 1, target: 1 },
-          { id: 5, total: 3, left: 0, target: 3 },
-          { id: 6, total: 3, left: 1, target: 2 },
-          { id: 7, total: 3, left: 2, target: 1 }
+          { id: 5, total: 2, left: 2, target: 0 },
+          { id: 6, total: 3, left: 0, target: 3 },
+          { id: 7, total: 3, left: 1, target: 2 },
+          { id: 8, total: 3, left: 2, target: 1 },
+          { id: 9, total: 3, left: 3, target: 0 },
+          { id: 10, total: 3, left: 1, target: 2 }
         ]
       },
       {
         levelId: 2,
-        title: "Level 2: 進階分解 (數字 4 - 5)",
-        description: "學習數字 4 與 5 的組合分解",
+        title: "Level 2: 數字 4 的專屬分解",
+        description: "專攻數字 4 的各種組合！",
         bgColor: "bg-emerald-100",
         borderColor: "border-emerald-400",
-        questions: [
-          { id: 1, total: 4, left: 1, target: 3 },
-          { id: 2, total: 4, left: 2, target: 2 },
-          { id: 3, total: 4, left: 0, target: 4 },
-          { id: 4, total: 5, left: 1, target: 4 },
-          { id: 5, total: 5, left: 2, target: 3 },
-          { id: 6, total: 5, left: 3, target: 2 }
-        ]
+        questions: generateTargetQuestions(4, 10)
       },
       {
         levelId: 3,
-        title: "Level 3: 橡果高手 (數字 6 - 8)",
-        description: "挑戰較大的橡果數量組合！",
-        bgColor: "bg-blue-100",
-        borderColor: "border-blue-400",
-        questions: [
-          { id: 1, total: 6, left: 3, target: 3 },
-          { id: 2, total: 6, left: 2, target: 4 },
-          { id: 3, total: 7, left: 5, target: 2 },
-          { id: 4, total: 7, left: 3, target: 4 },
-          { id: 5, total: 8, left: 5, target: 3 },
-          { id: 6, total: 8, left: 4, target: 4 }
-        ]
+        title: "Level 3: 數字 5 的專屬分解",
+        description: "專攻數字 5 的各種組合！",
+        bgColor: "bg-teal-100",
+        borderColor: "border-teal-400",
+        questions: generateTargetQuestions(5, 10)
       },
       {
         levelId: 4,
-        title: "Level 4: 樹洞挑戰 (數字 9 - 10)",
-        description: "挑戰數字 9 與 10 的終極組合！",
-        bgColor: "bg-purple-100",
-        borderColor: "border-purple-400",
-        questions: [
-          { id: 1, total: 9, left: 4, target: 5 },
-          { id: 2, total: 9, left: 6, target: 3 },
-          { id: 3, total: 10, left: 5, target: 5 },
-          { id: 4, total: 10, left: 2, target: 8 },
-          { id: 5, total: 10, left: 7, target: 3 }
-        ]
+        title: "Level 4: 數字 6 的專屬分解",
+        description: "專攻數字 6 的各種組合！",
+        bgColor: "bg-cyan-100",
+        borderColor: "border-cyan-400",
+        questions: generateTargetQuestions(6, 10)
       },
       {
         levelId: 5,
-        title: "Level 5: 橡果大師 (綜合挑戰)",
-        description: "綜合練習所有的數分解！",
+        title: "Level 5: 數字 7 的專屬分解",
+        description: "專攻數字 7 的各種組合！",
+        bgColor: "bg-blue-100",
+        borderColor: "border-blue-400",
+        questions: generateTargetQuestions(7, 10)
+      },
+      {
+        levelId: 6,
+        title: "Level 6: 數字 8 的專屬分解",
+        description: "專攻數字 8 的各種組合！",
+        bgColor: "bg-indigo-100",
+        borderColor: "border-indigo-400",
+        questions: generateTargetQuestions(8, 10)
+      },
+      {
+        levelId: 7,
+        title: "Level 7: 數字 9 的專屬分解",
+        description: "專攻數字 9 的各種組合！",
+        bgColor: "bg-purple-100",
+        borderColor: "border-purple-400",
+        questions: generateTargetQuestions(9, 10)
+      },
+      {
+        levelId: 8,
+        title: "Level 8: 數字 10 的專屬分解",
+        description: "專攻數字 10 的各種組合！",
+        bgColor: "bg-pink-100",
+        borderColor: "border-pink-400",
+        questions: generateTargetQuestions(10, 10)
+      },
+      {
+        levelId: 9,
+        title: "Level 9: 👑 橡果大師 (Final Boss)",
+        description: "終極大挑戰！包含 1 到 10 所有數字組合",
         bgColor: "bg-rose-100",
-        borderColor: "border-rose-400",
-        questions: [
-          { id: 1, total: 5, left: 0, target: 5 },
-          { id: 2, total: 7, left: 2, target: 5 },
-          { id: 3, total: 8, left: 2, target: 6 },
-          { id: 4, total: 10, left: 4, target: 6 },
-          { id: 5, total: 6, left: 1, target: 5 }
-        ]
+        borderColor: "border-rose-500",
+        questions: generateMixQuestions(10)
       }
     ];
 
@@ -264,8 +293,10 @@
         card.className = `${level.bgColor} border-4 ${level.borderColor} rounded-3xl p-6 shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer flex flex-col justify-between items-center text-center gap-3`;
         card.onclick = () => startLevel(idx);
 
+        const icon = idx === GAME_CONFIG.length - 1 ? '👑' : '🌰';
+
         card.innerHTML = `
-          <div class="text-4xl">🌰</div>
+          <div class="text-4xl">${icon}</div>
           <h3 class="text-2xl font-black text-gray-800">${level.title}</h3>
           <p class="text-amber-800 font-medium text-sm">${level.description}</p>
           <span class="bg-amber-500 text-white font-bold px-5 py-2 rounded-2xl border border-white shadow-sm mt-2">開始遊戲</span>
@@ -281,8 +312,17 @@
       currentLevelIndex = index;
       const level = GAME_CONFIG[currentLevelIndex];
       
+      // 動態刷新題庫 (確保每次進入都有新的隨機題目)
+      if (level.levelId >= 2 && level.levelId <= 8) {
+        level.questions = generateTargetQuestions(level.levelId + 2, 10);
+      } else if (level.levelId === 9) {
+        level.questions = generateMixQuestions(10);
+      }
+
       currentQuestionQueue = [...level.questions];
-      currentQuestionIndex = 0;
+      
+      // 隨機選定第一題
+      currentQuestionIndex = Math.floor(Math.random() * currentQuestionQueue.length);
 
       document.getElementById('menuScreen').classList.add('hidden');
       document.getElementById('victoryScreen').classList.add('hidden');
@@ -310,7 +350,7 @@
     }
 
     /* -----------------------------------------------------------------
-       選項動態生成 (僅顯示純數字)
+       選項動態生成 (純數字)
        ----------------------------------------------------------------- */
     function generateOptions(q) {
       const container = document.getElementById('optionsContainer');
@@ -320,7 +360,7 @@
       let distractorSet = new Set();
 
       while (distractorSet.size < 2) {
-        let fake = Math.floor(Math.random() * (q.total + 3));
+        let fake = Math.floor(Math.random() * (q.total + 2));
         if (fake !== correctAnswer) {
           distractorSet.add(fake);
         }
@@ -376,12 +416,13 @@
     }
 
     /* -----------------------------------------------------------------
-       答案驗證與錯誤重試機制
+       答案驗證與錯誤重試機制 (答錯會保留並切換其他題目)
        ----------------------------------------------------------------- */
     function checkAnswer(userAnswer) {
       const q = currentQuestionQueue[currentQuestionIndex];
 
       if (userAnswer === q.target) {
+        // --- 答對處理 ---
         document.getElementById('rightVal').innerText = userAnswer;
         showFeedback("✨ 太棒了！答對囉！");
 
@@ -391,17 +432,20 @@
         setTimeout(() => {
           rightCircle.classList.remove('bg-emerald-300', 'border-emerald-600');
           
+          // 移除已答對的題目
           currentQuestionQueue.splice(currentQuestionIndex, 1);
 
           if (currentQuestionQueue.length === 0) {
             showVictory();
           } else {
+            // 隨機選下一題
             currentQuestionIndex = Math.floor(Math.random() * currentQuestionQueue.length);
             loadQuestion();
           }
         }, 1200);
 
       } else {
+        // --- 答錯處理 ---
         showFeedback("😅 差一點點，再試一次吧！", true);
         
         const rightCircle = document.getElementById('rightCircle');
@@ -410,6 +454,7 @@
         setTimeout(() => {
           rightCircle.classList.remove('bg-red-200', 'border-red-500');
           
+          // 若隊列中還有其他題，隨機挑選另一題 (保證下一題不與當前題目相同)
           if (currentQuestionQueue.length > 1) {
             let nextIdx = currentQuestionIndex;
             while (nextIdx === currentQuestionIndex) {
@@ -417,13 +462,14 @@
             }
             currentQuestionIndex = nextIdx;
           }
+          // 載入新（或隨機切換的）題目
           loadQuestion();
         }, 1000);
       }
     }
 
     /* -----------------------------------------------------------------
-       通關獎勵 (Confetti 慶祝特效)
+       通關獎勵
        ----------------------------------------------------------------- */
     function showVictory() {
       document.getElementById('gameScreen').classList.add('hidden');
