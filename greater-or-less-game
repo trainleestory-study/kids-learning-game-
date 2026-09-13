@@ -1,1 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>大人小朋友比口大 - 幼兒數感練習平台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti CDN (五彩紙屑煙火效果) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .btn-bounce {
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-bounce:active {
+      transform: scale(0.94);
+    }
+    .drop-zone {
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .drop-zone.drag-over {
+      background-color: #fef08a;
+      border-color: #f59e0b;
+    }
+  </style>
+</head>
+<body class="bg-amber-50 min-h-screen text-slate-800 flex flex-col justify-between">
 
+  <!-- 頂部導覽列 -->
+  <header class="bg-amber-400 p-4 shadow-md flex justify-between items-center">
+    <button id="homeBtn" onclick="showMainMenu()" class="bg-white text-amber-900 text-lg md:text-xl font-bold px-4 py-2 rounded-2xl shadow hover:bg-amber-100 btn-bounce flex items-center gap-2 hidden">
+      🏠 首頁
+    </button>
+    <h1 id="headerTitle" class="text-2xl md:text-3xl font-black text-amber-950 mx-auto">大人小朋友比口大</h1>
+    <div id="soundToggle" onclick="toggleSound()" class="cursor-pointer text-3xl select-none" title="切換聲音">🔊</div>
+  </header>
+
+  <!-- 主要內容顯示區 -->
+  <main class="container mx-auto px-4 py-6 flex-grow flex flex-col justify-center items-center">
+
+    <!-- 1. 首頁關卡選單 (Grid) -->
+    <div id="mainMenu" class="w-full max-w-4xl space-y-6">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl md:text-4xl font-black text-amber-900 mb-2">請選擇關卡</h2>
+        <p class="text-amber-800 text-lg font-bold">看哪邊口大？大於 ( > )、小於 ( < ) 還是等於 ( = )</p>
+      </div>
+      <div id="levelGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 關卡卡片由 JS 動態生成 -->
+      </div>
+    </div>
+
+    <!-- 2. 遊戲進行畫面 -->
+    <div id="gameArea" class="w-full max-w-3xl hidden flex-col items-center space-y-6">
+      <!-- 關卡名稱與進度條 -->
+      <div class="w-full flex justify-between items-center px-4">
+        <span id="levelDisplayTitle" class="text-xl font-extrabold text-amber-900">關卡</span>
+        <span id="progressText" class="text-xl font-black text-amber-700">第 1 / 15 題</span>
+      </div>
+      <div class="w-full bg-amber-200 h-5 rounded-full overflow-hidden p-1 shadow-inner">
+        <div id="progressBar" class="bg-amber-500 h-full w-0 rounded-full transition-all duration-300"></div>
+      </div>
+
+      <!-- 題目顯示區 -->
+      <div class="flex items-center justify-center gap-3 md:gap-8 w-full my-6">
+        <!-- 左邊數值卡片 -->
+        <div id="leftCard" class="bg-white border-4 border-amber-300 rounded-3xl p-6 md:p-10 text-4xl md:text-6xl font-black text-amber-600 shadow-lg min-w-[120px] md:min-w-[180px] text-center">
+          0
+        </div>
+
+        <!-- 中間答案放置區 (Drop Zone) -->
+        <div id="answerBox" class="drop-zone border-4 border-dashed border-amber-400 bg-amber-100 rounded-3xl w-24 h-24 md:w-32 md:h-32 flex items-center justify-center text-4xl md:text-6xl font-black text-amber-800 shadow-inner">
+          ?
+        </div>
+
+        <!-- 右邊數值卡片 -->
+        <div id="rightCard" class="bg-white border-4 border-amber-300 rounded-3xl p-6 md:p-10 text-4xl md:text-6xl font-black text-amber-600 shadow-lg min-w-[120px] md:min-w-[180px] text-center">
+          0
+        </div>
+      </div>
+
+      <!-- 語音朗讀提示按鈕 -->
+      <button onclick="speakCurrentQuestion()" class="bg-sky-400 text-white font-black text-lg px-6 py-2.5 rounded-full shadow hover:bg-sky-500 btn-bounce flex items-center gap-2">
+        📢 聽題目
+      </button>
+
+      <!-- 答案選項卡片區 -->
+      <div class="w-full mt-4">
+        <p class="text-center text-amber-800 font-bold mb-4 text-lg">點擊或將答案拖拽到中間框框：</p>
+        <div id="optionsContainer" class="flex justify-center gap-6">
+          <!-- 選項按鈕由 JS 動態生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 結算/獎勵 Modal -->
+    <div id="rewardModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-2xl transform transition-all">
+        <div class="text-8xl animate-bounce">🥇</div>
+        <h3 id="rewardTitle" class="text-3xl font-black text-amber-600">數學小達人！</h3>
+        <p id="rewardDesc" class="text-slate-600 text-lg font-bold">你太棒了！順利完成 15 道題目！</p>
+        <div class="flex flex-col gap-3">
+          <button id="bonusBtn" onclick="startBonusChallenge()" class="bg-purple-500 text-white font-bold text-xl py-4 rounded-2xl shadow-lg hover:bg-purple-600 btn-bounce hidden">
+            🚀 挑戰百位數加碼關！
+          </button>
+          <button onclick="showMainMenu()" class="bg-amber-400 text-amber-950 font-bold text-xl py-4 rounded-2xl shadow-lg hover:bg-amber-500 btn-bounce">
+            再玩一次 / 回首頁
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="text-center py-4 text-amber-800 text-sm font-bold">
+    大人小朋友比口大 幼兒數感互動練習平台
+  </footer>
+
+  <!-- 頂層可編輯 JSON 設定檔與核心邏輯 -->
+  <script>
+    /* ==========================================================================
+       【頂層 JSON 設定檔】—— 非技術人員可在此直接編輯題庫與文字
+       ========================================================================== */
+    const GAME_CONFIG = {
+      soundEnabled: true,
+      voiceLanguage: "zh-HK", // 可切換 "zh-HK" (粵語) 或 "en-GB" (英語)
+      targetQuestionCount: 15, // 每關預設需完成 15 題以頒發獎牌
+      levels: [
+        {
+          id: 1,
+          title: "Level 1: 大人小朋友比口大～啊～～",
+          desc: "基礎比較 (10-100 )",
+          color: "bg-emerald-400 hover:bg-emerald-500 text-white",
+          options: [">", "<"],
+          type: "level1"
+        },
+        {
+          id: 2,
+          title: "Level 2: 比較大人與小朋友那個高？ 1",
+          desc: "初階比較 (10以內加法)",
+          color: "bg-sky-400 hover:bg-sky-500 text-white",
+          options: [">", "<", "="],
+          type: "level2"
+        },
+        {
+          id: 3,
+          title: "Level 3: 比較大人與小朋友那個高？ 2",
+          desc: "進階比較 (10-20加法)",
+          color: "bg-indigo-400 hover:bg-indigo-500 text-white",
+          options: [">", "<", "="],
+          type: "level3"
+        },
+        {
+          id: 4,
+          title: "Level 4: 大人小朋友一齊企！",
+          desc: "終極大挑戰 (1-20 加減法)",
+          color: "bg-rose-400 hover:bg-rose-500 text-white",
+          options: [">", "<", "="],
+          type: "level4"
+        }
+      ],
+      // Level 1 百位數附加挑戰題！ (可自由更換)
+      bonusQuestions: [
+        { left: 100, right: 200, answer: "<" },
+        { left: 400, right: 300, answer: ">" },
+        { left: 500, right: 500, answer: "=" },
+        { left: 700, right: 600, answer: ">" },
+        { left: 300, right: 800, answer: "<" }
+      ]
+    };
+
+    /* ==========================================================================
+       遊戲核心邏輯 (Vanilla JS)
+       ========================================================================== */
+    let currentLevel = null;
+    let currentQuestionIndex = 0;
+    let questionsList = [];
+    let currentQuestion = null;
+    let isBonusMode = false;
+
+    // 隨機整數產生器
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // 初始化選單
+    function initMenu() {
+      const grid = document.getElementById("levelGrid");
+      grid.innerHTML = "";
+      GAME_CONFIG.levels.forEach(lvl => {
+        const card = document.createElement("div");
+        card.className = `${lvl.color} p-6 rounded-3xl shadow-xl cursor-pointer btn-bounce flex flex-col justify-between h-48`;
+        card.onclick = () => startLevel(lvl);
+        card.innerHTML = `
+          <h3 class="text-2xl font-black">${lvl.title}</h3>
+          <p class="text-lg opacity-90">${lvl.desc}</p>
+          <div class="self-end bg-white/20 px-4 py-1.5 rounded-full text-sm font-black">開始關卡 ➔</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // 顯示首頁選單
+    function showMainMenu() {
+      document.getElementById("mainMenu").classList.remove("hidden");
+      document.getElementById("gameArea").classList.add("hidden");
+      document.getElementById("homeBtn").classList.add("hidden");
+      document.getElementById("rewardModal").classList.add("hidden");
+      document.getElementById("headerTitle").innerText = "大人小朋友比口大";
+    }
+
+    // 動態題目生成器 (確保符合 Level 1-4 的專屬規則)
+    function generateQuestions(level) {
+      let list = [];
+      isBonusMode = false;
+
+      if (level.type === "level1") {
+        // 1-5 題: 10-20
+        for (let i = 0; i < 5; i++) {
+          let a = getRandomInt(10, 20), b = getRandomInt(10, 20);
+          while (a === b) b = getRandomInt(10, 20);
+          list.push({ left: a, right: b, ans: a > b ? ">" : "<" });
+        }
+        // 6-10 題: 21-50
+        for (let i = 0; i < 5; i++) {
+          let a = getRandomInt(21, 50), b = getRandomInt(21, 50);
+          while (a === b) b = getRandomInt(21, 50);
+          list.push({ left: a, right: b, ans: a > b ? ">" : "<" });
+        }
+        // 11-15 題: 50-100
+        for (let i = 0; i < 5; i++) {
+          let a = getRandomInt(50, 100), b = getRandomInt(50, 100);
+          while (a === b) b = getRandomInt(50, 100);
+          list.push({ left: a, right: b, ans: a > b ? ">" : "<" });
+        }
+      } else if (level.type === "level2") {
+        // 10以內：大人 (單數字) vs 小朋友 (10以內加法算式)
+        for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
+          let adult = getRandomInt(1, 10);
+          let k1 = getRandomInt(0, adult);
+          let k2 = getRandomInt(0, 10 - k1);
+          let kidSum = k1 + k2;
+          let ans = adult > kidSum ? ">" : (adult < kidSum ? "<" : "=");
+          list.push({ left: adult, right: `${k1}+${k2}`, ans: ans });
+        }
+      } else if (level.type === "level3") {
+        // 10-20以內：大人加法 vs 小朋友加法總和比較
+        for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
+          let a1 = getRandomInt(5, 10), a2 = getRandomInt(5, 10);
+          let k1 = getRandomInt(5, 10), k2 = getRandomInt(5, 10);
+          let sumA = a1 + a2, sumK = k1 + k2;
+          let ans = sumA > sumK ? ">" : (sumA < sumK ? "<" : "=");
+          list.push({ left: `${a1}+${a2}`, right: `${k1}+${k2}`, ans: ans });
+        }
+      } else if (level.type === "level4") {
+        // 1-20 加減法混合比口大
+        for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
+          let isSubA = Math.random() > 0.5;
+          let isSubK = Math.random() > 0.5;
+          
+          let leftStr, leftVal;
+          if (isSubA) {
+            let v1 = getRandomInt(5, 20), v2 = getRandomInt(1, v1);
+            leftStr = `${v1}-${v2}`; leftVal = v1 - v2;
+          } else {
+            let v1 = getRandomInt(1, 10), v2 = getRandomInt(1, 10);
+            leftStr = `${v1}+${v2}`; leftVal = v1 + v2;
+          }
+
+          let rightStr, rightVal;
+          if (isSubK) {
+            let v1 = getRandomInt(5, 20), v2 = getRandomInt(1, v1);
+            rightStr = `${v1}-${v2}`; rightVal = v1 - v2;
+          } else {
+            let v1 = getRandomInt(1, 10), v2 = getRandomInt(1, 10);
+            rightStr = `${v1}+${v2}`; rightVal = v1 + v2;
+          }
+
+          let ans = leftVal > rightVal ? ">" : (leftVal < rightVal ? "<" : "=");
+          list.push({ left: leftStr, right: rightStr, ans: ans });
+        }
+      }
+      return list;
+    }
+
+    // 開始關卡
+    function startLevel(level) {
+      currentLevel = level;
+      currentQuestionIndex = 0;
+      questionsList = generateQuestions(level);
+      
+      document.getElementById("mainMenu").classList.add("hidden");
+      document.getElementById("gameArea").classList.remove("hidden");
+      document.getElementById("gameArea").classList.add("flex");
+      document.getElementById("homeBtn").classList.remove("hidden");
+      document.getElementById("headerTitle").innerText = level.title;
+      document.getElementById("levelDisplayTitle").innerText = level.title;
+
+      renderQuestion();
+    }
+
+    // 載入當前題目
+    function renderQuestion() {
+      currentQuestion = questionsList[currentQuestionIndex];
+      
+      // 更新進度
+      const total = questionsList.length;
+      document.getElementById("progressText").innerText = `第 ${currentQuestionIndex + 1} / ${total} 題`;
+      document.getElementById("progressBar").style.width = `${((currentQuestionIndex + 1) / total) * 100}%`;
+
+      // 渲染題目與放置目標
+      document.getElementById("leftCard").innerText = currentQuestion.left;
+      document.getElementById("rightCard").innerText = currentQuestion.right;
+      const answerBox = document.getElementById("answerBox");
+      answerBox.innerText = "?";
+      answerBox.classList.remove("bg-emerald-200", "border-emerald-500", "text-emerald-800");
+
+      // 渲染選項卡片
+      const optionsContainer = document.getElementById("optionsContainer");
+      optionsContainer.innerHTML = "";
+      
+      const opts = currentLevel.options || [">", "<", "="];
+      opts.forEach(symbol => {
+        const btn = document.createElement("div");
+        btn.className = "bg-amber-400 border-b-4 border-amber-600 text-amber-950 font-black text-4xl md:text-5xl w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center cursor-pointer shadow-lg btn-bounce select-none";
+        btn.innerText = symbol;
+        btn.setAttribute("draggable", "true");
+
+        // 點擊觸控
+        btn.onclick = () => checkAnswer(symbol);
+
+        // 拖曳 (Drag & Drop)
+        btn.ondragstart = (e) => {
+          e.dataTransfer.setData("text/plain", symbol);
+        };
+
+        optionsContainer.appendChild(btn);
+      });
+
+      // 設定 Drag & Drop 放置區域
+      answerBox.ondragover = (e) => {
+        e.preventDefault();
+        answerBox.classList.add("drag-over");
+      };
+      answerBox.ondragleave = () => {
+        answerBox.classList.remove("drag-over");
+      };
+      answerBox.ondrop = (e) => {
+        e.preventDefault();
+        answerBox.classList.remove("drag-over");
+        const symbol = e.dataTransfer.getData("text/plain");
+        if (symbol) checkAnswer(symbol);
+      };
+
+      // 自動朗讀
+      speakCurrentQuestion();
+    }
+
+    // 檢查答案與反饋邏輯
+    function checkAnswer(selectedSymbol) {
+      if (selectedSymbol === currentQuestion.ans) {
+        // 答對處理
+        const answerBox = document.getElementById("answerBox");
+        answerBox.innerText = selectedSymbol;
+        answerBox.classList.add("bg-emerald-200", "border-emerald-500", "text-emerald-800");
+
+        speakText("答對了！你真棒！");
+
+        setTimeout(() => {
+          currentQuestionIndex++;
+          if (currentQuestionIndex < questionsList.length) {
+            renderQuestion();
+          } else {
+            showLevelReward();
+          }
+        }, 1200);
+      } else {
+        // 答錯處理：溫和提示並重新將題目排至隊尾重試
+        speakText("差一點點，再試試看喔！");
+        questionsList.push(currentQuestion); // 將答錯的題再次排入隊列中，直到全對為止
+        
+        const answerBox = document.getElementById("answerBox");
+        answerBox.innerText = selectedSymbol;
+        answerBox.classList.add("bg-rose-200", "border-rose-500", "text-rose-800");
+        setTimeout(() => {
+          answerBox.innerText = "?";
+          answerBox.classList.remove("bg-rose-200", "border-rose-500", "text-rose-800");
+        }, 800);
+      }
+    }
+
+    // 全關卡獎勵機制 (完成 15 題觸發五彩紙屑煙火與獎牌)
+    function showLevelReward() {
+      // 觸發 canvas-confetti 煙火效果
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 }
+      });
+
+      const modal = document.getElementById("rewardModal");
+      const bonusBtn = document.getElementById("bonusBtn");
+      
+      document.getElementById("rewardTitle").innerText = "🥇 數學小達人！";
+      document.getElementById("rewardDesc").innerText = `恭喜你成功完成了 ${questionsList.length} 道題目，贏得「數學小達人」獎牌！`;
+
+      if (currentLevel.type === "level1" && !isBonusMode) {
+        bonusBtn.classList.remove("hidden");
+        speakText("恭喜你完成 15 題！你是數學小達人！要挑戰百位數加碼關嗎？");
+      } else {
+        bonusBtn.classList.add("hidden");
+        speakText("恭喜你完成全部題目！你是數學小達人！");
+      }
+
+      modal.classList.remove("hidden");
+    }
+
+    // 啟動附加百位數關卡
+    function startBonusChallenge() {
+      document.getElementById("rewardModal").classList.add("hidden");
+      isBonusMode = true;
+      currentQuestionIndex = 0;
+      questionsList = GAME_CONFIG.bonusQuestions.map(q => ({
+        left: q.left,
+        right: q.right,
+        ans: q.answer
+      }));
+
+      document.getElementById("headerTitle").innerText = "附加關卡：百位數大挑戰";
+      document.getElementById("levelDisplayTitle").innerText = "百位數大挑戰";
+      renderQuestion();
+    }
+
+    /* ==========================================================================
+       雙語 Web Speech API 語音朗讀功能
+       ========================================================================== */
+    function speakText(text) {
+      if (!GAME_CONFIG.soundEnabled || !('speechSynthesis' in window)) return;
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = GAME_CONFIG.voiceLanguage;
+      utterance.rate = 0.85; // 專為幼兒調整的適中語速
+      utterance.pitch = 1.1;  // 略高語調
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakCurrentQuestion() {
+      if (!currentQuestion) return;
+      const text = `${currentQuestion.left} 與 ${currentQuestion.right}，哪邊比較大？`;
+      speakText(text);
+    }
+
+    function toggleSound() {
+      GAME_CONFIG.soundEnabled = !GAME_CONFIG.soundEnabled;
+      document.getElementById("soundToggle").innerText = GAME_CONFIG.soundEnabled ? "🔊" : "🔇";
+    }
+
+    // 頁面載入完成初始化選單
+    window.onload = () => {
+      initMenu();
+    };
+  </script>
+</body>
+</html>
