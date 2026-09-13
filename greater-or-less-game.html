@@ -369,7 +369,7 @@
         answerBox.innerText = selectedSymbol;
         answerBox.classList.add("bg-emerald-200", "border-emerald-500", "text-emerald-800");
 
-        speakText("答對了！你真棒！");
+        speakText("答岩了！");
 
         setTimeout(() => {
           currentQuestionIndex++;
@@ -381,7 +381,7 @@
         }, 1200);
       } else {
         // 答錯處理：溫和提示並重新將題目排至隊尾重試
-        speakText("差一點點，再試試看喔！");
+        speakText("差少少，再試試！");
         questionsList.push(currentQuestion); // 將答錯的題再次排入隊列中，直到全對為止
         
         const answerBox = document.getElementById("answerBox");
