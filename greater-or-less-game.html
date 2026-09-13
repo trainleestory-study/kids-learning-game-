@@ -38,7 +38,6 @@
       🏠 首頁
     </button>
     <h1 id="headerTitle" class="text-2xl md:text-3xl font-black text-amber-950 mx-auto">大人小朋友比口大</h1>
-    <div id="soundToggle" onclick="toggleSound()" class="cursor-pointer text-3xl select-none" title="切換聲音">🔊</div>
   </header>
 
   <!-- 主要內容顯示區 -->
@@ -84,11 +83,6 @@
         </div>
       </div>
 
-      <!-- 語音朗讀提示按鈕 -->
-      <button onclick="speakCurrentQuestion()" class="bg-sky-400 text-white font-black text-lg px-6 py-2.5 rounded-full shadow hover:bg-sky-500 btn-bounce flex items-center gap-2">
-        📢 聽題目
-      </button>
-
       <!-- 答案選項卡片區 -->
       <div class="w-full mt-4">
         <p class="text-center text-amber-800 font-bold mb-4 text-lg">點擊或將答案拖拽到中間框框：</p>
@@ -127,8 +121,6 @@
        【頂層 JSON 設定檔】—— 非技術人員可在此直接編輯題庫與文字
        ========================================================================== */
     const GAME_CONFIG = {
-      soundEnabled: true,
-      voiceLanguage: "zh-HK", // 可切換 "zh-HK" (粵語) 或 "en-GB" (英語)
       targetQuestionCount: 15, // 每關預設需完成 15 題以頒發獎牌
       levels: [
         {
@@ -214,7 +206,7 @@
       document.getElementById("headerTitle").innerText = "大人小朋友比口大";
     }
 
-    // 動態題目生成器 (確保符合 Level 1-4 的專屬規則)
+    // 動態題目生成器
     function generateQuestions(level) {
       let list = [];
       isBonusMode = false;
@@ -239,7 +231,6 @@
           list.push({ left: a, right: b, ans: a > b ? ">" : "<" });
         }
       } else if (level.type === "level2") {
-        // 10以內：大人 (單數字) vs 小朋友 (10以內加法算式)
         for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
           let adult = getRandomInt(1, 10);
           let k1 = getRandomInt(0, adult);
@@ -249,7 +240,6 @@
           list.push({ left: adult, right: `${k1}+${k2}`, ans: ans });
         }
       } else if (level.type === "level3") {
-        // 10-20以內：大人加法 vs 小朋友加法總和比較
         for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
           let a1 = getRandomInt(5, 10), a2 = getRandomInt(5, 10);
           let k1 = getRandomInt(5, 10), k2 = getRandomInt(5, 10);
@@ -258,7 +248,6 @@
           list.push({ left: `${a1}+${a2}`, right: `${k1}+${k2}`, ans: ans });
         }
       } else if (level.type === "level4") {
-        // 1-20 加減法混合比口大
         for (let i = 0; i < GAME_CONFIG.targetQuestionCount; i++) {
           let isSubA = Math.random() > 0.5;
           let isSubK = Math.random() > 0.5;
@@ -356,9 +345,6 @@
         const symbol = e.dataTransfer.getData("text/plain");
         if (symbol) checkAnswer(symbol);
       };
-
-      // 自動朗讀
-      speakCurrentQuestion();
     }
 
     // 檢查答案與反饋邏輯
@@ -369,8 +355,6 @@
         answerBox.innerText = selectedSymbol;
         answerBox.classList.add("bg-emerald-200", "border-emerald-500", "text-emerald-800");
 
-        speakText("答岩了！");
-
         setTimeout(() => {
           currentQuestionIndex++;
           if (currentQuestionIndex < questionsList.length) {
@@ -380,9 +364,8 @@
           }
         }, 1200);
       } else {
-        // 答錯處理：溫和提示並重新將題目排至隊尾重試
-        speakText("差少少，再試試！");
-        questionsList.push(currentQuestion); // 將答錯的題再次排入隊列中，直到全對為止
+        // 答錯處理：重新將題目排至隊尾重試
+        questionsList.push(currentQuestion);
         
         const answerBox = document.getElementById("answerBox");
         answerBox.innerText = selectedSymbol;
@@ -411,10 +394,8 @@
 
       if (currentLevel.type === "level1" && !isBonusMode) {
         bonusBtn.classList.remove("hidden");
-        speakText("恭喜你完成 15 題！你是數學小達人！要挑戰百位數加碼關嗎？");
       } else {
         bonusBtn.classList.add("hidden");
-        speakText("恭喜你完成全部題目！你是數學小達人！");
       }
 
       modal.classList.remove("hidden");
@@ -434,32 +415,6 @@
       document.getElementById("headerTitle").innerText = "附加關卡：百位數大挑戰";
       document.getElementById("levelDisplayTitle").innerText = "百位數大挑戰";
       renderQuestion();
-    }
-
-    /* ==========================================================================
-       雙語 Web Speech API 語音朗讀功能
-       ========================================================================== */
-    function speakText(text) {
-      if (!GAME_CONFIG.soundEnabled || !('speechSynthesis' in window)) return;
-
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = GAME_CONFIG.voiceLanguage;
-      utterance.rate = 0.85; // 專為幼兒調整的適中語速
-      utterance.pitch = 1.1;  // 略高語調
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    function speakCurrentQuestion() {
-      if (!currentQuestion) return;
-      const text = `${currentQuestion.left} 與 ${currentQuestion.right}，哪邊比較大？`;
-      speakText(text);
-    }
-
-    function toggleSound() {
-      GAME_CONFIG.soundEnabled = !GAME_CONFIG.soundEnabled;
-      document.getElementById("soundToggle").innerText = GAME_CONFIG.soundEnabled ? "🔊" : "🔇";
     }
 
     // 頁面載入完成初始化選單
